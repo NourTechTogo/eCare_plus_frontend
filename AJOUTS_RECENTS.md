@@ -97,3 +97,7 @@ Le design existant est conservé. Ce bilan ne constitue ni une certification de 
 - [Configuration](docs/integration-clients/CONFIGURATION.md)
 - [Contrat API](docs/backend/API.md)
 - [Ajouts backend](https://github.com/NourTechTogo/eCare_plus_backend/blob/ecare_backend_stable/AJOUTS_RECENTS.md) et [ajouts mobile](https://github.com/NourTechTogo/eCare_plus_mobile/blob/ecare_mobile_stable/AJOUTS_RECENTS.md)
+
+## Publication indépendante — 25 octobre 2026
+
+Branche `ecare_frontend_stable` publiée dans le dépôt frontend uniquement, sans fusion dans main. Documentation et exemples de configuration inclus dans ce dépôt ; clés, bases, fichiers privés et artefacts de compilation exclus. Voir [validation et limites](docs/VALIDATION.md).
