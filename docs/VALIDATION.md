@@ -17,3 +17,9 @@ Le push externe attend un fournisseur. Les tests iOS et les appels sur Internet 
 Backend : Java 21, `./mvnw test` depuis `backend_ecare_plus`. Les tests PostgreSQL nécessitent une instance dédiée et les variables ECARE_TEST_POSTGRES_URL, ECARE_TEST_POSTGRES_USER, ECARE_TEST_POSTGRES_PASSWORD.
 Web : `npm ci`, `npm test`, `npm run lint`, `npm run build`.
 Mobile : `flutter pub get`, `flutter analyze`, `flutter test`, puis compilation avec `--dart-define=API_URL=...`.
+
+## Mise à jour finale des gestes de notification
+
+Backend : 169 tests réussis, aucun ignoré, avec PostgreSQL 18.6 et migration V30.
+Mobile : 151 tests réussis, 2 tests réseau optionnels ignorés ; analyse sans anomalie.
+Recette navigateur avec l'API réelle sur 604/360/320 px : toucher pour lecture, gauche pour supprimer, Annuler pour restaurer, droite pour archiver, onglet Archivées et désarchivage, catégorie/recherche/détail. Aucune erreur JavaScript observée.

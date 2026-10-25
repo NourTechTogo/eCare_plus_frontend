@@ -101,3 +101,7 @@ Le design existant est conservé. Ce bilan ne constitue ni une certification de 
 ## Publication indépendante — 25 octobre 2026
 
 Branche `ecare_frontend_stable` publiée dans le dépôt frontend uniquement, sans fusion dans main. Documentation et exemples de configuration inclus dans ce dépôt ; clés, bases, fichiers privés et artefacts de compilation exclus. Voir [validation et limites](docs/VALIDATION.md).
+
+## Contrat commun de boîte de notifications — V30
+
+L'API commune ajoute l'archivage, le désarchivage, la suppression logique et la restauration des notifications personnelles. La requête web courante conserve son URL et exclut désormais les notifications archivées/supprimées. Le type de réponse documente le champ optionnel dateArchivage ; les routes et droits sont détaillés dans docs/backend/API.md. Les gestes et l'onglet d'archives demandés ici sont implémentés dans le client mobile.

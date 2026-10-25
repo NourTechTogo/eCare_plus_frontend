@@ -1,5 +1,3 @@
-> Document conservé des étapes précédentes. Voir [la validation de livraison](../VALIDATION.md) pour les résultats et limites à la publication. Les fichiers `.maintenance` cités ne sont pas inclus.
-
 # API backend eCare+ — registre de réalisation
 
 Référence prioritaire : cahier des charges (`audit/reference-1.txt`). Contrat antérieur : `docs/implementation/CONTRACT.md`. Les ajouts sont documentés ici à mesure de leur vérification ; le plan n'est pas une preuve de disponibilité.
@@ -102,3 +100,21 @@ Voir [NOTIFICATIONS.md](NOTIFICATIONS.md), [APPELS.md](APPELS.md), [CONSERVATION
 - `GET /api/v1/rendez-vous?patientId=...` : liste réelle réservée au professionnel actif, limitée à ses affectations et consentements valides. Le filtre patient est facultatif.
 - `POST /api/v1/mobile/conversations/{id}/messages` accepte `sourceRef` UUID facultatif pour compatibilité. Les clients actuels le conservent par brouillon inchangé : même contenu/pièces retourne le même message ; clé réutilisée avec une commande différente renvoie 409. La migration V29 ajoute la contrainte unique.
 - `POST /api/v1/auth/deconnexion` termine aussi les appels du compte après validation de la révocation ; les fermetures fournisseur échouées restent à reprendre par la maintenance.
+
+## Boîte de notifications : lecture, archives et suppression (V30)
+
+Toutes les routes sont authentifiées et limitées au propriétaire de la notification.
+
+| Action | Route |
+| --- | --- |
+| Boîte courante | `GET /api/v1/compte/notifications` |
+| Archives | `GET /api/v1/compte/notifications?archivees=true` |
+| Marquer lue | `POST /api/v1/compte/notifications/{id}/lecture` |
+| Archiver | `POST /api/v1/compte/notifications/{id}/archivage` |
+| Désarchiver | `POST /api/v1/compte/notifications/{id}/desarchivage` |
+| Supprimer de la boîte | `DELETE /api/v1/compte/notifications/{id}` |
+| Annuler la suppression | `POST /api/v1/compte/notifications/{id}/restauration` |
+
+Les mutations réussies retournent 204 et sont idempotentes. Une notification supprimée disparaît des listes courante et archivée ; sa restauration retrouve son état d'archivage précédent. La suppression est logique et ne supprime ni message, ni appel, ni alerte clinique liée. `dateArchivage` est ajouté à la réponse. Le statut de lecture reste indépendant de l'archivage. Les mutations d'une autre personne sont refusées ; les lignes sont verrouillées pendant la mutation.
+
+La migration Flyway V30 ajoute `date_archivage`, `date_suppression` et un index de boîte, sans effacer les notifications existantes. L'ancienne liste mobile masque également archives et suppressions ; le portail web conserve sa requête courante et bénéficie du même filtrage.
