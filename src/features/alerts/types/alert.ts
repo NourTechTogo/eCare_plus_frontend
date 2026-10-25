@@ -1,4 +1,4 @@
-export type AlertPriority = 'haute' | 'moyenne'
+export type AlertPriority = 'haute' | 'moyenne' | 'faible' | 'critique'
 
 export interface AlertResolution {
   /** Observations saisies par le professionnel à la clôture. */
@@ -8,6 +8,7 @@ export interface AlertResolution {
 }
 
 export interface Alert {
+  status: string
   id: string
   patientId: string
   patientName: string

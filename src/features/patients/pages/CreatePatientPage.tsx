@@ -20,10 +20,10 @@ export function CreatePatientPage() {
         `Dossier n° ${patient.fileNumber} enregistré pour ${patient.firstName} ${patient.lastName}.`,
       )
       await navigate(`/patients/${patient.id}`)
-    } catch {
+    } catch (error) {
       feedback.error(
         "Le dossier n'a pas pu être créé",
-        'Vos informations sont conservées. Vérifiez votre connexion puis réessayez.',
+        error instanceof Error ? error.message : 'Vos informations sont conservées. Réessayez.',
       )
       setSubmitting(false)
     }

@@ -52,7 +52,7 @@ export function PatientAppointments({ patientId, summary = false, action }: Pati
                 </p>
                 <AppointmentStatusBadge status={appointment.status} />
               </div>
-              <p className="text-sm text-ink">{appointment.reason}</p>
+              <p className="text-sm text-ink [overflow-wrap:anywhere]">{appointment.reason}</p>
               {appointment.location && (
                 <p className="text-xs text-muted">{appointment.location}</p>
               )}

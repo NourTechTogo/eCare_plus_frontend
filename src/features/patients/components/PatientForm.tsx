@@ -1,4 +1,6 @@
 import type { FormEvent, ReactNode } from 'react'
+import { listProfessionals } from '@/features/patients/services/patientService'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -52,6 +54,7 @@ function FormSection({ title, children }: { title: string; children: ReactNode }
 export function PatientForm({ initialPatient, submitting, onSubmit, onCancel }: PatientFormProps) {
   const { values, errors, isDirty, setValue, validateOnBlur, submit } =
     usePatientForm(initialPatient)
+  const professionals = useAsyncData('professionals', listProfessionals)
   const text = initialPatient ? texts.edit : texts.create
   const errorCount = Object.keys(errors).length
 
@@ -105,7 +108,6 @@ export function PatientForm({ initialPatient, submitting, onSubmit, onCancel }: 
           <TextField label="Prénom(s)" required autoComplete="off" {...bind('firstName')} />
           <SelectField
             label="Sexe"
-            required
             placeholder="Sélectionner"
             options={sexOptions}
             {...bind('sex')}
@@ -123,12 +125,13 @@ export function PatientForm({ initialPatient, submitting, onSubmit, onCancel }: 
           <TextField
             label="Téléphone"
             type="tel"
-            required
             autoComplete="off"
             hint="Exemple : +228 90 00 00 00"
             {...bind('phone')}
           />
           <TextField label="Adresse e-mail" type="email" autoComplete="off" {...bind('email')} />
+          <TextField label="Ville" {...bind('city')}/>
+          <TextField label="Pays" {...bind('country')}/>
           <div className="md:col-span-2">
             <TextField
               label="Adresse"
@@ -140,21 +143,37 @@ export function PatientForm({ initialPatient, submitting, onSubmit, onCancel }: 
         </FormSection>
 
         <FormSection title="Suivi">
+          <SelectField label="Médecin référent" required placeholder="Sélectionner" options={professionals.status === 'success' ? professionals.data.map(d=>({value:d.id,label:`${d.prenoms} ${d.nom}${d.specialite ? ' · '+d.specialite : ''}`})) : []} {...bind('professionalId')}/>
+          {professionals.status === 'error' && <p role="alert" className="text-sm text-danger">{professionals.error}</p>}
+          {professionals.status === 'loading' && <p role="status">Chargement des médecins…</p>}
+          {!initialPatient && <>
           <SelectField
             label="Pathologie suivie"
-            required
             placeholder="Sélectionner"
             options={conditionOptions}
             {...bind('condition')}
           />
+          </>}
         </FormSection>
 
+        {!initialPatient && <FormSection title="Informations médicales facultatives">
+          <TextField label="Groupe sanguin" {...bind('bloodGroup')}/>
+          <TextField label="Taille (cm)" type="number" min="1" step="0.1" {...bind('heightCm')}/>
+          <TextField label="Poids (kg)" type="number" min="1" step="0.1" {...bind('weightKg')}/>
+          <TextField label="Allergies" {...bind('allergies')}/>
+          <TextField label="Antécédents" {...bind('history')}/>
+        </FormSection>}
+        {!initialPatient && <FormSection title="Accès initial du patient">
+          <TextField label="Mot de passe initial" type="password" required autoComplete="new-password" hint="Au moins 12 caractères, une lettre et un chiffre. Remettre personnellement au patient avec son identifiant." {...bind('password')}/>
+          <p className="text-sm text-muted">Le patient doit lire et accepter personnellement les conditions et la confidentialité dans l’application mobile avant l’accès clinique.</p>
+        </FormSection>}
         <FormSection title="Personne à prévenir">
-          <TextField label="Nom complet" autoComplete="off" {...bind('emergencyContactName')} />
+          <TextField label="Nom complet" required autoComplete="off" {...bind('emergencyContactName')} />
           <TextField
             label="Téléphone"
             type="tel"
             autoComplete="off"
+            required
             {...bind('emergencyContactPhone')}
           />
         </FormSection>

@@ -33,9 +33,9 @@ function Details({ children }: { children: ReactNode }) {
 
 function Item({ label, value }: { label: string; value?: string }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</dt>
-      <dd className={`text-sm ${value ? 'text-ink' : 'text-muted'}`}>{value ?? 'Non renseigné'}</dd>
+      <dd className={`text-sm leading-relaxed [overflow-wrap:anywhere] ${value ? 'text-ink' : 'text-muted'}`}>{value?.trim() ? value : 'Non renseigné'}</dd>
     </div>
   )
 }
@@ -57,12 +57,21 @@ function PatientInformation({ patient }: { patient: Patient }) {
           <Item label="Téléphone" value={patient.phone} />
           <Item label="Adresse e-mail" value={patient.email} />
           <Item label="Adresse" value={patient.address} />
+          <Item label="Ville" value={patient.city}/>
+          <Item label="Pays" value={patient.country}/>
         </Details>
       </Card>
 
       <Card title="Suivi">
         <Details>
           <Item label="Pathologie suivie" value={conditionLabels[patient.condition]} />
+          <Item label="Médecin référent" value={patient.professionalName}/>
+          <Item label="Consentement patient" value={patient.consentAccepted ? 'Accepté' : 'À recueillir dans l’application mobile'}/>
+          <Item label="Groupe sanguin" value={patient.bloodGroup}/>
+          <Item label="Taille (cm)" value={patient.heightCm}/>
+          <Item label="Poids (kg)" value={patient.weightKg}/>
+          <Item label="Allergies" value={patient.allergies}/>
+          <Item label="Antécédents" value={patient.history}/>
         </Details>
       </Card>
 
@@ -100,6 +109,7 @@ export function PatientDetailsPage({ tabs = [] }: PatientDetailsPageProps) {
   const { patient } = state
   const fullName = `${patient.firstName} ${patient.lastName}`
   const initials = `${patient.firstName.charAt(0)}${patient.lastName.charAt(0)}`.toUpperCase()
+  const age = patient.birthDate ? getAge(patient.birthDate) : null
   const born = patient.sex === 'F' ? 'Née' : 'Né'
 
   const allTabs = [...tabs, informationTab]
@@ -115,19 +125,18 @@ export function PatientDetailsPage({ tabs = [] }: PatientDetailsPageProps) {
       title="Dossier patient"
       description={`Dossier n° ${patient.fileNumber}, créé le ${formatDate(patient.createdAt)}`}
       backLink={backLink}
+      contentClassName="mx-auto w-full max-w-7xl"
     >
       <Card>
-        <div className="flex flex-wrap items-center gap-5">
+        <div className="flex min-w-0 items-start gap-4 sm:items-center sm:gap-5">
           <Avatar initials={initials} size="lg" />
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="font-display text-2xl font-bold text-ink">{fullName}</h2>
-              <ConditionBadges condition={patient.condition} />
-            </div>
-            <p className="text-sm text-muted">
-              {born} le {formatDate(patient.birthDate)} ({getAge(patient.birthDate)} ans) • Dossier n°{' '}
-              {patient.fileNumber} • {patient.phone}
-            </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2"><h2 className="font-display text-xl leading-snug font-bold text-ink [overflow-wrap:anywhere] sm:text-2xl">{fullName}</h2><ConditionBadges condition={patient.condition}/></div>
+            <dl className="mt-3 flex min-w-0 flex-col gap-2 text-sm text-muted sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-1">
+              <div className="min-w-0 [overflow-wrap:anywhere]"><dt className="sr-only">Date de naissance</dt><dd>{patient.birthDate?`${born} le ${formatDate(patient.birthDate)}${age!==null&&Number.isFinite(age)?` (${age} ans)`:''}`:'Date de naissance non renseignée'}</dd></div>
+              <div className="min-w-0 [overflow-wrap:anywhere]"><dt className="sr-only">Numéro de dossier</dt><dd>Dossier n° {patient.fileNumber}</dd></div>
+              <div className="min-w-0 [overflow-wrap:anywhere]"><dt className="sr-only">Téléphone</dt><dd>{patient.phone||'Téléphone non renseigné'}</dd></div>
+            </dl>
           </div>
         </div>
       </Card>
@@ -138,6 +147,7 @@ export function PatientDetailsPage({ tabs = [] }: PatientDetailsPageProps) {
         <>
           <Tabs
             label="Rubriques du dossier"
+            wrap
             tabs={allTabs}
             active={activeId}
             onChange={openTab}
@@ -147,7 +157,7 @@ export function PatientDetailsPage({ tabs = [] }: PatientDetailsPageProps) {
             id={tabPanelId(activeId)}
             role="tabpanel"
             aria-labelledby={tabId(activeId)}
-            className="flex animate-enter flex-col gap-6"
+            className="flex min-w-0 animate-enter scroll-mt-40 flex-col gap-6 sm:scroll-mt-24"
           >
             {activeTab ? activeTab.render(patient, openTab) : <PatientInformation patient={patient} />}
           </div>

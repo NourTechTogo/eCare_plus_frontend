@@ -21,7 +21,7 @@ const count = (total: number) => (total === 1 ? '1 alerte' : `${total} alertes`)
 
 function valueClassName(alert: Alert) {
   if (alert.resolution) return 'text-ink'
-  return alert.priority === 'haute' ? 'text-danger' : 'text-warning'
+  return (alert.priority === 'haute' || alert.priority === 'critique') ? 'text-danger' : 'text-warning'
 }
 
 function AlertsTable({ alerts, closed = false }: { alerts: Alert[]; closed?: boolean }) {
@@ -111,10 +111,11 @@ export function AlertsPage() {
 
   const active = state.data.filter((alert) => !alert.resolution)
   const closed = state.data.filter((alert) => alert.resolution)
-  const high = active.filter((alert) => alert.priority === 'haute')
+  const high = active.filter((alert) => (alert.priority === 'haute' || alert.priority === 'critique'))
 
   return (
     <Page title="File des alertes" description={pageDescription}>
+      {state.refreshError && <AlertMessage variant="error" title="Actualisation impossible">{state.refreshError}</AlertMessage>}
       <div className="grid gap-4 md:grid-cols-3">
         <StatTile
           tone="red"
@@ -124,7 +125,7 @@ export function AlertsPage() {
         />
         <StatTile
           tone="amber"
-          label="Priorité moyenne"
+          label="Autres alertes actives"
           value={count(active.length - high.length)}
           hint="À vérifier ensuite"
         />

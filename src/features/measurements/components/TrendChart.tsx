@@ -40,13 +40,13 @@ function niceTicks(min: number, max: number) {
 }
 
 /** Minuits compris dans l'intervalle, espacés pour ne pas dépasser `MAX_DAY_LABELS` libellés. */
-function dayTicks(min: number, max: number) {
+function dayTicks(min: number, max: number, maxLabels = MAX_DAY_LABELS) {
   const days: number[] = []
   const day = new Date(min)
   day.setHours(0, 0, 0, 0)
   if (day.getTime() < min) day.setDate(day.getDate() + 1)
   for (; day.getTime() <= max; day.setDate(day.getDate() + 1)) days.push(day.getTime())
-  const every = Math.ceil(days.length / MAX_DAY_LABELS)
+  const every = Math.ceil(days.length / maxLabels)
   // On compte à rebours depuis le dernier jour, pour que la date la plus récente soit toujours libellée.
   return days.filter((_, index) => (days.length - 1 - index) % every === 0)
 }
@@ -86,7 +86,8 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
   }, [])
 
   const multiple = series.length > 1
-  const marginRight = multiple ? DIRECT_LABEL_WIDTH : 20
+  const directLabels = multiple && width >= 480
+  const marginRight = directLabels ? DIRECT_LABEL_WIDTH : 20
   const plotWidth = Math.max(width - MARGIN.left - marginRight, 10)
   const plotHeight = HEIGHT - MARGIN.top - MARGIN.bottom
   const plotBottom = MARGIN.top + plotHeight
@@ -131,7 +132,6 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
           const point = s.points.find((candidate) => candidate.time === hoveredTime)
           return point ? [{ label: s.label, color: s.color, value: point.value }] : []
         })
-  const tooltipOnLeft = hoveredTime !== null && x(hoveredTime) > MARGIN.left + plotWidth / 2
 
   return (
     <figure className="flex flex-col gap-4">
@@ -214,7 +214,7 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
               </g>
             ))}
 
-            {dayTicks(tMin, tMax).map((tick) => (
+            {dayTicks(tMin, tMax, Math.max(2, Math.min(MAX_DAY_LABELS, Math.floor(plotWidth / 80)))).map((tick) => (
               <text
                 key={tick}
                 x={x(tick)}
@@ -300,7 +300,7 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
               </text>
             )}
 
-            {multiple &&
+            {directLabels &&
               endLabels.map((endLabel) => (
                 <text
                   key={endLabel.label}
@@ -329,16 +329,14 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
 
         {hoveredTime !== null && (
           <div
-            className={`pointer-events-none absolute top-2 z-10 rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-md ${
-              tooltipOnLeft ? '-translate-x-full' : ''
-            }`}
-            style={{ left: x(hoveredTime) + (tooltipOnLeft ? -12 : 12) }}
+            className="pointer-events-none absolute top-2 z-10 w-56 max-w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-md"
+            style={{ left: Math.max(0, Math.min(x(hoveredTime) + 12, width - Math.min(224, width))) }}
           >
-            <p className="whitespace-nowrap text-muted">
+            <p className="text-muted">
               {formatDateTime(new Date(hoveredTime).toISOString())}
             </p>
             {hovered.map((item) => (
-              <p key={item.label} className="mt-1 whitespace-nowrap text-ink">
+              <p key={item.label} className="mt-1 text-ink">
                 <span className="flex items-center gap-1.5">
                   <span
                     aria-hidden="true"

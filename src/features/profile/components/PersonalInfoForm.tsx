@@ -71,10 +71,10 @@ export function PersonalInfoForm({ user, onSaved }: PersonalInfoFormProps) {
     try {
       onSaved(await updateProfile(user, values))
       feedback.success('Profil mis à jour', 'Vos informations sont enregistrées.')
-    } catch {
+    } catch (error) {
       feedback.error(
         "Le profil n'a pas pu être mis à jour",
-        'Vos modifications sont conservées. Vérifiez votre connexion puis réessayez.',
+        error instanceof Error ? error.message : 'Vos modifications sont conservées. Réessayez.',
       )
     } finally {
       setSaving(false)

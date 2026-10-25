@@ -1,0 +1,17 @@
+import {controlClassName} from '@/components/ui/styles'
+import {useState,type FormEvent} from 'react'
+import {useAuth} from '@/features/auth'
+import {useAsyncData} from '@/hooks/useAsyncData'
+import {Button} from '@/components/ui/Button'
+import {addTargetNote,deleteTargetNote,listTargetNotes,updateTargetNote,type TargetType,type Visibility,type TargetNote} from '../services/targetNoteService'
+export function TargetNotes({type,id}:{type:TargetType;id:string}){
+  const [open,setOpen]=useState(false)
+  return <details onToggle={e=>setOpen(e.currentTarget.open)}><summary className="cursor-pointer rounded-full px-2 py-1 text-xs font-semibold text-primary-strong hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-primary">Notes liées</summary>{open&&<NotesForm type={type} id={id}/>}</details>
+}
+function NotesForm({type,id}:{type:TargetType;id:string}){
+  const {user}=useAuth(),[revision,setRevision]=useState(0),[text,setText]=useState(''),[visibility,setVisibility]=useState<Visibility>('PRIVEE'),[editing,setEditing]=useState<TargetNote>(),[error,setError]=useState(''),[busy,setBusy]=useState(false)
+  const state=useAsyncData(`notes:${type}:${id}:${revision}`,()=>listTargetNotes(type,id))
+  async function save(e:FormEvent){e.preventDefault();if(busy)return;setBusy(true);setError('');try{if(editing)await updateTargetNote(editing.id,text,visibility,editing.version);else await addTargetNote(type,id,text,visibility);setText('');setEditing(undefined);setRevision(v=>v+1)}catch(e){setError(e instanceof Error?e.message:'Enregistrement refusé.')}finally{setBusy(false)}}
+  async function remove(note:TargetNote){if(!window.confirm('Supprimer cette note ?'))return;try{await deleteTargetNote(note.id);setRevision(v=>v+1)}catch(e){setError(e instanceof Error?e.message:'Suppression refusée.')}}
+  return <div className="mt-2 flex flex-col gap-3 rounded-3xl border border-line bg-surface p-4 text-sm text-ink shadow-sm">{error&&<p role="alert">{error}</p>}{state.status==='error'&&<p role="alert">{state.error}</p>}{state.status==='success'&&state.data.content.map(n=><div key={n.id}><p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{n.contenu}</p><p className="text-xs">{n.visibilite==='PRIVEE'?'Privée, visible de son auteur':'Partagée avec le patient'} · {new Date(n.dateCreation).toLocaleString('fr')}</p>{n.auteurId===user?.id&&<div className="flex gap-2"><Button variant="soft" size="sm" disabled={busy} onClick={()=>{setEditing(n);setText(n.contenu);setVisibility(n.visibilite)}}>Modifier</Button><Button variant="soft" size="sm" disabled={busy} onClick={()=>void remove(n)}>Supprimer</Button></div>}</div>)}<form onSubmit={e=>void save(e)} className="flex flex-col gap-2"><label>Note<textarea required maxLength={5000} value={text} disabled={busy} onChange={e=>setText(e.target.value)} className={`${controlClassName(false)} min-h-24 py-3`}/></label><label>Visibilité<select className={controlClassName(false)} value={visibility} disabled={busy} onChange={e=>setVisibility(e.target.value as Visibility)}><option value="PRIVEE">Privée</option><option value="PARTAGEE">Partagée avec le patient</option></select></label><Button size="sm" type="submit" disabled={busy||!text.trim()}>{editing?'Enregistrer la modification':'Ajouter la note'}</Button>{editing&&<Button variant="soft" size="sm" onClick={()=>{setEditing(undefined);setText('')}}>Annuler</Button>}</form></div>
+}

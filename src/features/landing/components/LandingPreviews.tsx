@@ -121,7 +121,7 @@ export function AlertCard() {
         <p className="text-xs text-muted">Tension artérielle au-dessus du seuil</p>
       </div>
       <div className="flex w-full items-center justify-between gap-3">
-        <span className="font-display font-bold text-danger">16/10 mmHg</span>
+        <span className="font-display font-bold text-danger">160/100 mmHg</span>
         <span className={buttonClassName('primary', 'sm')}>Traiter l'alerte</span>
       </div>
     </div>
@@ -141,7 +141,7 @@ export function TrendPreview() {
     <Preview>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="text-xs font-semibold text-muted">Tension artérielle</p>
-        <p className="font-display text-lg font-bold text-ink">13/8 mmHg</p>
+        <p className="font-display text-lg font-bold text-ink">130/80 mmHg</p>
       </div>
       <div className="mt-3">
         <MiniChart
@@ -166,7 +166,7 @@ export function TrendPreview() {
 }
 
 const previewAlerts = [
-  { name: 'Mariam T.', trigger: 'Tension artérielle', value: '16/10 mmHg', high: true },
+  { name: 'Mariam T.', trigger: 'Tension artérielle', value: '160/100 mmHg', high: true },
   { name: 'Jean K.', trigger: 'Glycémie à jeun', value: '1,31 g/L', high: true },
   { name: 'Awa D.', trigger: 'Glycémie post-prandiale', value: '1,92 g/L', high: false },
 ]

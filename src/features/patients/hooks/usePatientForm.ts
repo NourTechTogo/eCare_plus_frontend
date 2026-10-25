@@ -2,6 +2,15 @@ import { useState } from 'react'
 import type { Condition, PatientInput, Sex } from '@/features/patients/types/patient'
 
 export type PatientFormField =
+  | 'professionalId'
+  | 'password'
+  | 'city'
+  | 'country'
+  | 'bloodGroup'
+  | 'heightCm'
+  | 'weightKg'
+  | 'allergies'
+  | 'history'
   | 'lastName'
   | 'firstName'
   | 'sex'
@@ -18,6 +27,15 @@ export type PatientFormErrors = Partial<Record<PatientFormField, string>>
 
 /** Ordre d'affichage des champs, utilisé pour placer le focus sur la première erreur. */
 export const patientFormFields: PatientFormField[] = [
+  'professionalId',
+  'password',
+  'city',
+  'country',
+  'bloodGroup',
+  'heightCm',
+  'weightKg',
+  'allergies',
+  'history',
   'lastName',
   'firstName',
   'sex',
@@ -31,9 +49,18 @@ export const patientFormFields: PatientFormField[] = [
 ]
 
 const emptyValues: PatientFormValues = {
+  professionalId: '',
+  password: '',
+  city: '',
+  country: '',
+  bloodGroup: '',
+  heightCm: '',
+  weightKg: '',
+  allergies: '',
+  history: '',
   lastName: '',
   firstName: '',
-  sex: '',
+  sex: 'N',
   birthDate: '',
   phone: '',
   email: '',
@@ -55,11 +82,11 @@ export function todayIsoDate() {
 }
 
 function isSex(value: string): value is Sex {
-  return value === 'F' || value === 'M'
+  return value === 'F' || value === 'M' || value === 'A' || value === 'N'
 }
 
-function isCondition(value: string): value is Condition {
-  return value === 'diabete' || value === 'hypertension' || value === 'diabete_hypertension'
+function isCondition(value: string): value is Condition | '' {
+  return value === '' || value === 'diabete' || value === 'hypertension' || value === 'diabete_hypertension'
 }
 
 function validatePhone(value: string) {
@@ -90,6 +117,15 @@ function validateBirthDate(value: string) {
 function validateField(field: PatientFormField, rawValue: string): string | undefined {
   const value = rawValue.trim()
   switch (field) {
+    case 'professionalId': return value ? undefined : 'Sélectionnez le médecin référent.'
+    case 'password': return undefined
+    case 'heightCm':
+    case 'weightKg': return value && (!Number.isFinite(Number(value)) || Number(value) <= 0) ? 'Saisissez une valeur positive.' : undefined
+    case 'city':
+    case 'country':
+    case 'bloodGroup':
+    case 'allergies':
+    case 'history': return undefined
     case 'lastName':
       return validateName(value, 'Saisissez le nom du patient.')
     case 'firstName':
@@ -99,7 +135,7 @@ function validateField(field: PatientFormField, rawValue: string): string | unde
     case 'birthDate':
       return validateBirthDate(value)
     case 'phone':
-      return value ? validatePhone(value) : 'Saisissez le numéro de téléphone du patient.'
+      return value ? validatePhone(value) : undefined
     case 'email':
       return value && !EMAIL_PATTERN.test(value)
         ? 'Saisissez une adresse e-mail valide, par exemple nom@exemple.com.'
@@ -107,19 +143,20 @@ function validateField(field: PatientFormField, rawValue: string): string | unde
     case 'condition':
       return isCondition(value) ? undefined : 'Sélectionnez la pathologie suivie.'
     case 'emergencyContactPhone':
-      return value ? validatePhone(value) : undefined
-    case 'address':
-    case 'emergencyContactName':
-      return undefined
+      return value ? validatePhone(value) : 'Saisissez le numéro de la personne à prévenir.'
+    case 'emergencyContactName': return validateName(value, 'Saisissez la personne à prévenir.')
+    case 'address': return undefined
   }
 }
 
-function validateAll(values: PatientFormValues): PatientFormErrors {
+export function validatePatientValues(values: PatientFormValues, creating: boolean): PatientFormErrors {
   const errors: PatientFormErrors = {}
   for (const field of patientFormFields) {
     const error = validateField(field, values[field])
     if (error) errors[field] = error
   }
+  if (!values.phone.trim() && !values.email.trim()) errors.phone = 'Renseignez un téléphone ou un e-mail pour la connexion du patient.'
+  if (creating && (values.password.length < 12 || new TextEncoder().encode(values.password).length > 72 || !/[A-Za-z]/.test(values.password) || !/\d/.test(values.password))) errors.password = 'De 12 caractères à 72 octets, avec une lettre et un chiffre.'
   return errors
 }
 
@@ -130,6 +167,15 @@ function toPatientInput(values: PatientFormValues): PatientInput | null {
 
   const optional = (value: string) => value.trim() || undefined
   return {
+    professionalId: optional(values.professionalId),
+    password: values.password || undefined,
+    city: optional(values.city),
+    country: optional(values.country),
+    bloodGroup: optional(values.bloodGroup),
+    heightCm: optional(values.heightCm),
+    weightKg: optional(values.weightKg),
+    allergies: optional(values.allergies),
+    history: optional(values.history),
     lastName: values.lastName.trim(),
     firstName: values.firstName.trim(),
     sex,
@@ -145,6 +191,15 @@ function toPatientInput(values: PatientFormValues): PatientInput | null {
 
 function toFormValues(patient: PatientInput): PatientFormValues {
   return {
+    professionalId: patient.professionalId ?? '',
+    password: patient.password ?? '',
+    city: patient.city ?? '',
+    country: patient.country ?? '',
+    bloodGroup: patient.bloodGroup ?? '',
+    heightCm: patient.heightCm ?? '',
+    weightKg: patient.weightKg ?? '',
+    allergies: patient.allergies ?? '',
+    history: patient.history ?? '',
     lastName: patient.lastName,
     firstName: patient.firstName,
     sex: patient.sex,
@@ -187,7 +242,7 @@ export function usePatientForm(initialPatient?: PatientInput) {
 
   /** Valide tout le formulaire. Retourne les données prêtes à envoyer, ou les erreurs. */
   const submit = (): { input: PatientInput } | { errors: PatientFormErrors } => {
-    const nextErrors = validateAll(values)
+    const nextErrors = validatePatientValues(values, !initialPatient)
     setErrors(nextErrors)
     const input = Object.keys(nextErrors).length === 0 ? toPatientInput(values) : null
     return input ? { input } : { errors: nextErrors }

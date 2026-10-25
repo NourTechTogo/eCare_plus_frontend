@@ -58,9 +58,9 @@ export function AppLayout({ navItems, user, topAction, onLogout }: AppLayoutProp
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Barre supérieure : titre de la page, notifications et compte, toujours visibles. */}
-        <div className="sticky top-0 z-30 flex min-h-18 items-center gap-3 border-b border-line bg-surface px-4 py-3 sm:px-8">
-          <div ref={setTitleSlot} className="flex min-w-0 flex-1 items-center" />
-          {topAction}
+        <div className="sticky top-0 z-30 flex min-h-18 flex-wrap items-center justify-end gap-x-3 gap-y-3 border-b border-line bg-surface px-4 py-3 sm:px-8">
+          <div ref={setTitleSlot} className="flex min-w-0 basis-full flex-1 items-center md:basis-0" />
+          <div className="mr-auto min-w-0 md:mr-0">{topAction}</div>
           <UserMenu
             name={user.name}
             role={user.role}

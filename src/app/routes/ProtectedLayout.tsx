@@ -1,8 +1,9 @@
 import { Navigate, useLocation } from 'react-router'
-import { DoctorNotifications } from '@/app/routes/DoctorNotifications'
+import { ServerNotifications } from '@/features/account/components/ServerNotifications'
+import { IncomingCallBanner } from '@/features/messaging/components/IncomingCallBanner'
 import {
-  alertsIconPath,
   appointmentsIconPath,
+  alertsIconPath,
   messagingIconPath,
 } from '@/app/routes/navIcons'
 import { AppLayout, type NavItem } from '@/components/layouts/AppLayout'
@@ -35,15 +36,11 @@ const messagingItem: NavItem = {
   iconPath: messagingIconPath,
 }
 
-const appointmentsItem: NavItem = {
-  to: '/rendez-vous',
-  label: 'Rendez-vous',
-  iconPath: appointmentsIconPath,
-}
+const appointmentsItem:NavItem={to:'/rendez-vous',label:'Rendez-vous',iconPath:appointmentsIconPath}
 
 const navItemsByRole: Record<UserRole, NavItem[]> = {
-  gestionnaire: [patientsItem],
-  medecin: [dashboardItem, patientsItem, alertsItem, messagingItem, appointmentsItem],
+  gestionnaire: [patientsItem,{to:'/patients/referencement',label:'Référencer un patient',iconPath:'M3 3h7v7H3V3Zm2 2v3h3V5H5Zm9-2h7v7h-7V3Zm2 2v3h3V5h-3ZM3 14h7v7H3v-7Zm2 2v3h3v-3H5Zm9-2h3v3h-3v-3Zm4 4h3v3h-3v-3Z'}],
+  medecin: [dashboardItem, patientsItem, alertsItem, messagingItem,appointmentsItem],
 }
 
 /**
@@ -59,12 +56,12 @@ export function ProtectedLayout() {
   }
 
   return (
-    <AppLayout
+    <><AppLayout
       navItems={navItemsByRole[user.role]}
       user={{ name: user.name, role: roleLabels[user.role], email: user.email }}
       // Les notifications portent sur le suivi médical : elles sont réservées au médecin.
-      topAction={user.role === 'medecin' ? <DoctorNotifications /> : undefined}
+      topAction={<ServerNotifications />}
       onLogout={logout}
-    />
+    />{user.role==='medecin'&&<IncomingCallBanner/>}</>
   )
 }

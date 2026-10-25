@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { SelectField } from '@/components/ui/SelectField'
 import { MeasurementTrends } from '@/features/measurements/components/MeasurementTrends'
+import { PatientThresholds } from '@/features/measurements/components/PatientThresholds'
 import { useMeasurements } from '@/features/measurements/hooks/useMeasurements'
 import {
   formatMeasurementValue,
@@ -12,6 +13,7 @@ import {
 } from '@/features/measurements/labels'
 import type { Measurement } from '@/features/measurements/types/measurement'
 import { formatDateTime } from '@/utils/formatDateTime'
+import { TargetNotes } from '@/features/targeted-notes/components/TargetNotes'
 
 const kindOptions = Object.entries(kindLabels).map(([value, label]) => ({ value, label }))
 
@@ -32,7 +34,7 @@ function latestByLabel(measurements: Measurement[]) {
 
 function LatestMeasurements({ measurements }: { measurements: Measurement[] }) {
   return (
-    <dl className="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-4">
+    <dl className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(12rem,100%),1fr))] gap-4">
       {latestByLabel(measurements).map((measurement) => (
         <div key={measurement.id} className="flex flex-col gap-1 rounded-lg bg-page p-4">
           <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
@@ -54,7 +56,9 @@ const HISTORY_PAGE_SIZE = 10
 function MeasurementHistory({ measurements }: { measurements: Measurement[] }) {
   const [kind, setKind] = useState('')
   const [expanded, setExpanded] = useState(false)
-  const shown = kind ? measurements.filter((measurement) => measurement.kind === kind) : measurements
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const shown = measurements.filter(measurement => (!kind || measurement.kind === kind) && (!from || measurement.recordedAt >= `${from}T00:00:00Z`) && (!to || measurement.recordedAt <= `${to}T23:59:59.999Z`))
   const visible = expanded ? shown : shown.slice(0, HISTORY_PAGE_SIZE)
 
   return (
@@ -71,12 +75,14 @@ function MeasurementHistory({ measurements }: { measurements: Measurement[] }) {
           />
         </div>
 
+        <div className="grid min-w-0 gap-3 text-sm sm:grid-cols-2"><label className="flex min-w-0 flex-col gap-2">Du<input type="date" value={from} onChange={event=>setFrom(event.target.value)} className="h-11 w-full min-w-0 max-w-full rounded-xl border border-control bg-page px-3"/></label><label className="flex min-w-0 flex-col gap-2">Au<input type="date" value={to} min={from} onChange={event=>setTo(event.target.value)} className="h-11 w-full min-w-0 max-w-full rounded-xl border border-control bg-page px-3"/></label></div>
+
         {shown.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">
             Aucune mesure de ce type n'a été transmise.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl focus-visible:outline-2 focus-visible:outline-primary" tabIndex={0} role="region" aria-label="Historique des mesures, tableau défilant">
             <table className="w-full min-w-136 border-separate border-spacing-y-2 text-sm">
               <thead>
                 <tr>
@@ -89,6 +95,7 @@ function MeasurementHistory({ measurements }: { measurements: Measurement[] }) {
                   <th scope="col" className={headClassName}>
                     Valeur
                   </th>
+                    <th scope="col" className={headClassName}>Source</th>
                 </tr>
               </thead>
               <tbody>
@@ -101,6 +108,7 @@ function MeasurementHistory({ measurements }: { measurements: Measurement[] }) {
                     <td className={`${cellClassName} font-semibold whitespace-nowrap`}>
                       {formatMeasurementValue(measurement)}
                     </td>
+                    <td className={cellClassName}>{measurement.source ?? 'Non précisée'}<TargetNotes type="MESURE" id={measurement.id}/></td>
                   </tr>
                 ))}
               </tbody>
@@ -137,13 +145,14 @@ export function PatientMeasurements({ patientId, summary = false, action }: Pati
   if (state.status === 'error') {
     return (
       <Alert variant="error" title="Les mesures n'ont pas pu être chargées.">
-        Rechargez la page pour réessayer.
+        {state.error}
       </Alert>
     )
   }
 
   if (state.status === 'loading' || state.measurements.length === 0) {
     return (
+      <>
       <Card title="Dernières mesures reçues">
         <p
           role={state.status === 'loading' ? 'status' : undefined}
@@ -154,16 +163,20 @@ export function PatientMeasurements({ patientId, summary = false, action }: Pati
             : "Ce patient n'a encore transmis aucune mesure."}
         </p>
       </Card>
+      {!summary && state.status === 'success' && <PatientThresholds patientId={patientId}/>}
+      </>
     )
   }
 
   return (
     <>
+      {state.refreshError && <Alert variant="error" title="Actualisation impossible">{state.refreshError}</Alert>}
       <Card title="Dernières mesures reçues" action={action}>
         <LatestMeasurements measurements={state.measurements} />
       </Card>
       {!summary && (
         <>
+          <PatientThresholds patientId={patientId}/>
           <MeasurementTrends measurements={state.measurements} />
           <MeasurementHistory measurements={state.measurements} />
         </>

@@ -2,17 +2,14 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router'
 import {
   alertsIconPath,
-  appointmentsIconPath,
   messagingIconPath,
 } from '@/app/routes/navIcons'
 import { NotificationMenu, type NotificationItem } from '@/components/ui/NotificationMenu'
 import { useAlerts } from '@/features/alerts'
-import { isUpcoming, useAppointments } from '@/features/appointments'
 import { useConversations } from '@/features/messaging'
-import { formatDateTime } from '@/utils/formatDateTime'
 
 /** Un rendez-vous est signalé lorsqu'il a lieu dans les deux jours. */
-const APPOINTMENT_NOTICE_MS = 48 * 60 * 60 * 1000
+
 
 /*
  * Notifications du médecin, déduites de ce qui attend une action de sa part : alertes actives,
@@ -22,17 +19,14 @@ const APPOINTMENT_NOTICE_MS = 48 * 60 * 60 * 1000
 function NotificationsLoader({ onLoaded }: { onLoaded: (items: NotificationItem[]) => void }) {
   const alerts = useAlerts()
   const conversations = useConversations()
-  const appointments = useAppointments()
 
   useEffect(() => {
     if (
       alerts.status !== 'success' ||
-      conversations.status !== 'success' ||
-      appointments.status !== 'success'
+      conversations.status !== 'success'
     ) {
       return
     }
-    const now = Date.now()
     onLoaded([
       ...alerts.data
         .filter((alert) => !alert.resolution)
@@ -43,7 +37,7 @@ function NotificationsLoader({ onLoaded }: { onLoaded: (items: NotificationItem[
             description: `${alert.trigger} (${alert.value})`,
             to: `/alertes/${alert.id}`,
             iconPath: alertsIconPath,
-            tone: alert.priority === 'haute' ? 'red' : 'amber',
+            tone: (alert.priority === 'haute' || alert.priority === 'critique') ? 'red' : 'amber',
           }),
         ),
       ...conversations.data
@@ -61,24 +55,9 @@ function NotificationsLoader({ onLoaded }: { onLoaded: (items: NotificationItem[
             tone: 'blue',
           }),
         ),
-      ...appointments.data
-        .filter(
-          (appointment) =>
-            isUpcoming(appointment, now) &&
-            new Date(appointment.scheduledAt).getTime() - now <= APPOINTMENT_NOTICE_MS,
-        )
-        .map(
-          (appointment): NotificationItem => ({
-            id: `rendez-vous:${appointment.id}`,
-            title: `Rendez-vous : ${appointment.patientName}`,
-            description: formatDateTime(appointment.scheduledAt),
-            to: '/rendez-vous',
-            iconPath: appointmentsIconPath,
-            tone: 'green',
-          }),
-        ),
+
     ])
-  }, [alerts, conversations, appointments, onLoaded])
+  }, [alerts, conversations, onLoaded])
 
   return null
 }

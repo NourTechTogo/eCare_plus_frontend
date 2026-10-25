@@ -5,11 +5,11 @@ import { AuthProvider } from '@/features/auth'
 
 function App() {
   return (
-    <FeedbackProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <FeedbackProvider>
         <RouterProvider router={router} />
-      </AuthProvider>
-    </FeedbackProvider>
+      </FeedbackProvider>
+    </AuthProvider>
   )
 }
 

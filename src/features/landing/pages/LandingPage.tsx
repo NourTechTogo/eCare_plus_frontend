@@ -32,6 +32,7 @@ const navLinkClassName =
 const icons = {
   droplet: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z',
   pulse: 'M3 12h4l2.5-6 4 12 2.5-6h5',
+  thermometer: 'M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0ZM12 8v9',
   scale:
     'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1ZM8.5 10.500a3.5 3.5 0 0 1 7 0ZM12 10.500l1.5-2.5',
   heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.600A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z',
@@ -81,7 +82,7 @@ const sectionLinks = [
 
 const keyFacts: { icon: IconName; label: string; value: string }[] = [
   { icon: 'heart', label: 'Pathologies suivies', value: 'Diabète et hypertension' },
-  { icon: 'pulse', label: 'Mesures', value: 'Glycémie, tension, poids, pouls' },
+  { icon: 'pulse', label: 'Mesures', value: 'Six constantes de santé' },
   { icon: 'bell', label: 'Alertes', value: 'Classées par priorité' },
   { icon: 'lock', label: 'Accès', value: 'Réservé aux professionnels' },
 ]
@@ -97,6 +98,8 @@ const measures: { icon: IconName; name: string; detail: string }[] = [
   { icon: 'pulse', name: 'Tension artérielle', detail: 'Systolique et diastolique, en mmHg' },
   { icon: 'scale', name: 'Poids', detail: 'En kilogrammes' },
   { icon: 'heart', name: 'Fréquence cardiaque', detail: 'En battements par minute' },
+  { icon: 'thermometer', name: 'Température', detail: 'En degrés Celsius' },
+  { icon: 'droplet', name: 'SpO2', detail: 'Saturation en oxygène, en pourcentage' },
 ]
 
 const steps = [

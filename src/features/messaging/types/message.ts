@@ -21,6 +21,8 @@ export interface MessageAttachment {
 }
 
 export interface Message {
+  pieces?: {id:string;nomOriginal:string;typeMime:string;tailleOctets:number}[]
+  readAt?: string
   id: string
   conversationId: string
   /** Le backend renvoie l'identifiant de l'expéditeur ; l'interface n'a besoin que de son côté. */

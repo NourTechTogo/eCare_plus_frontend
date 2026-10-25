@@ -1,5 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { TargetNotes } from '@/features/targeted-notes/components/TargetNotes'
 import { Link, useParams, useSearchParams } from 'react-router'
+import { OpenConversationButton } from '@/features/messaging/components/OpenConversationButton'
 import { Page } from '@/components/layouts/Page'
 import { Alert as AlertMessage } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -59,7 +61,7 @@ function AlertBanner({ alert }: { alert: Alert }) {
           closed ? 'bg-success' : 'bg-danger'
         }`}
       >
-        {closed ? 'Clôturée' : 'En cours de vérification'}
+        {{NOUVELLE:'Nouvelle',PRISE_EN_CHARGE:'Prise en charge',TRANSMISE:'Transmise',CLOTUREE:'Clôturée'}[alert.status] ?? alert.status}
       </span>
     </div>
   )
@@ -93,10 +95,10 @@ function ResolutionForm({ alert, currentUserName, onClosed }: ResolutionFormProp
     try {
       onClosed(await closeAlert(alert.id, note.trim(), currentUserName))
       feedback.success('Alerte clôturée', 'Vos observations sont enregistrées.')
-    } catch {
+    } catch (error) {
       feedback.error(
         "L'alerte n'a pas pu être clôturée",
-        'Vos observations sont conservées. Vérifiez votre connexion puis réessayez.',
+        error instanceof Error ? error.message : 'Vos observations sont conservées. Réessayez.',
       )
       setSubmitting(false)
     }
@@ -173,6 +175,8 @@ export function AlertDetailsPage({ currentUserName, renderPatientContext }: Aler
       backLink={backLink}
     >
       <AlertBanner alert={alert} />
+      <TargetNotes type="ALERTE" id={alert.id}/>
+      <OpenConversationButton patientId={alert.patientId}/>
 
       <Tabs
         label="Rubriques de l'alerte"

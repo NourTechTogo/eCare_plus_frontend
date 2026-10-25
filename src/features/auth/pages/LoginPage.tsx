@@ -106,6 +106,7 @@ export function LoginPage() {
         onSubmit={(event) => void handleSubmit(event)}
         className="flex flex-col gap-5"
       >
+        {sessionStorage.getItem('ecare.sessionExpired') && <Alert variant="error" title="Votre session a expiré.">Reconnectez-vous pour continuer.</Alert>}
         {failure && (
           <Alert variant="error" title={failureMessages[failure].title}>
             {failureMessages[failure].hint}

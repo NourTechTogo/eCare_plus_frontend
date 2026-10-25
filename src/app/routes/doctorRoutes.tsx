@@ -1,13 +1,9 @@
 import { useState } from 'react'
+import {AppointmentStatusBadge,isUpcoming,PatientAppointments,useAppointments} from '@/features/appointments'
+import { OpenConversationButton } from '@/features/messaging/components/OpenConversationButton'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { AlertDetailsPage, PriorityBadge, useAlerts } from '@/features/alerts'
-import {
-  AppointmentStatusBadge,
-  isUpcoming,
-  PatientAppointments,
-  useAppointments,
-} from '@/features/appointments'
 import { useAuth } from '@/features/auth'
 import { DashboardPage, type DashboardData } from '@/features/dashboard'
 import {
@@ -26,6 +22,9 @@ import {
   type PatientTab,
 } from '@/features/patients'
 import { formatDateTime } from '@/utils/formatDateTime'
+import { PatientDocuments } from '@/features/documents/components/PatientDocuments'
+import { PatientTreatments } from '@/features/treatments/components/PatientTreatments'
+import { PatientSummary } from '@/features/treatments/components/PatientSummary'
 
 /* Écrans du médecin qui assemblent plusieurs fonctionnalités (patients, alertes, mesures, notes). */
 
@@ -35,9 +34,9 @@ export function DashboardRoute() {
   const patients = usePatients()
   const alerts = useAlerts()
   const latest = useLatestMeasurements()
-  const appointments = useAppointments()
+  const appointments=useAppointments()
+  const [now]=useState(()=>Date.now())
   const conversations = useConversations()
-  const [now] = useState(() => Date.now())
   const sources = [patients, alerts, latest, appointments, conversations]
 
   let data: DashboardData | null = null
@@ -45,8 +44,8 @@ export function DashboardRoute() {
     patients.status === 'success' &&
     alerts.status === 'success' &&
     latest.status === 'success' &&
-    appointments.status === 'success' &&
-    conversations.status === 'success'
+    conversations.status === 'success' &&
+    appointments.status === 'success'
   ) {
     const active = alerts.data.filter((alert) => !alert.resolution)
     data = {
@@ -67,15 +66,7 @@ export function DashboardRoute() {
             : []
         })
         .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
-      upcomingAppointments: appointments.data
-        .filter((appointment) => isUpcoming(appointment, now))
-        .map((appointment) => ({
-          id: appointment.id,
-          patientName: appointment.patientName,
-          reason: appointment.reason,
-          scheduledAt: appointment.scheduledAt,
-          statusBadge: <AppointmentStatusBadge status={appointment.status} />,
-        })),
+      upcomingAppointments: appointments.data.filter(item=>isUpcoming(item,now)).map(item=>({id:item.id,patientName:item.patientName,reason:item.reason,scheduledAt:item.scheduledAt,statusBadge:<AppointmentStatusBadge status={item.status}/>})),
       unreadMessageCount: conversations.data.reduce(
         (total, conversation) => total + conversation.unreadCount,
         0,
@@ -86,11 +77,11 @@ export function DashboardRoute() {
           patientName: alert.patientName,
           trigger: alert.trigger,
           value: alert.value,
-          highPriority: alert.priority === 'haute',
+          highPriority: (alert.priority === 'haute' || alert.priority === 'critique'),
           priorityBadge: <PriorityBadge priority={alert.priority} />,
         }))
         // Tri stable : les alertes en haute priorité passent devant, l'ordre par date est conservé.
-        .sort((a, b) => Number(b.highPriority) - Number(a.highPriority)),
+,
     }
   }
 
@@ -139,7 +130,7 @@ export function DoctorPatientsRoute() {
           (alert) => alert.patientId === patient.id && !alert.resolution,
         )
         if (active.length === 0) return <Badge tone="green">Aucune alerte active</Badge>
-        const highest = active.some((alert) => alert.priority === 'haute') ? 'haute' : 'moyenne'
+        const highest = active[0].priority
         return <PriorityBadge priority={highest} />
       },
     },
@@ -166,9 +157,11 @@ export function DoctorPatientRecordRoute() {
         )
         return (
           <>
+            <OpenConversationButton patientId={patient.id}/>
+            <PatientSummary patientId={patient.id}/>
             <PatientMeasurements patientId={patient.id} summary action={seeAll('mesures')} />
             <div className="grid items-start gap-6 xl:grid-cols-2">
-              <PatientAppointments patientId={patient.id} summary action={seeAll('rendez-vous')} />
+              <PatientAppointments patientId={patient.id} summary action={seeAll('rendez-vous')}/>
               <PatientNotes
                 patientId={patient.id}
                 authorName={authorName}
@@ -185,16 +178,15 @@ export function DoctorPatientRecordRoute() {
       label: 'Mesures',
       render: (patient) => <PatientMeasurements patientId={patient.id} />,
     },
+    {id:'rendez-vous',label:'Rendez-vous',render:patient=><PatientAppointments patientId={patient.id}/>},
+    {id:'documents',label:'Documents',render:patient=><PatientDocuments key={patient.id} patientId={patient.id}/>},
+    {id:'traitements',label:'Traitements',render:patient=><PatientTreatments key={patient.id} patientId={patient.id}/>},
     {
       id: 'observations',
       label: 'Observations',
       render: (patient) => <PatientNotes patientId={patient.id} authorName={authorName} />,
     },
-    {
-      id: 'rendez-vous',
-      label: 'Rendez-vous',
-      render: (patient) => <PatientAppointments patientId={patient.id} />,
-    },
+
   ]
 
   return <PatientDetailsPage tabs={tabs} />

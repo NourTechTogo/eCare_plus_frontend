@@ -31,13 +31,13 @@ export function EditPatientPage() {
   const handleSubmit = async (input: PatientInput) => {
     setSubmitting(true)
     try {
-      await updatePatient(patient.id, input)
+      await updatePatient(patient.id, input, patient)
       feedback.success('Dossier patient modifié', 'Les nouvelles informations sont enregistrées.')
       await navigate(`/patients/${patient.id}`)
-    } catch {
+    } catch (error) {
       feedback.error(
         "Les modifications n'ont pas pu être enregistrées",
-        'Vos modifications sont conservées. Vérifiez votre connexion puis réessayez.',
+        error instanceof Error ? error.message : 'Vos modifications sont conservées. Réessayez.',
       )
       setSubmitting(false)
     }

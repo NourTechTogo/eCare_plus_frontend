@@ -1,37 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
-
-export type AsyncData<T> =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'success'; data: T }
-
-/**
- * Charge une donnée asynchrone et suit son état.
- * Le chargement est relancé quand `key` change ; `load` peut donc être une fonction en ligne.
- */
-export function useAsyncData<T>(key: string, load: () => Promise<T>): AsyncData<T> {
-  const [loaded, setLoaded] = useState<{ key: string; state: AsyncData<T> } | null>(null)
-  // Dernière version de `load`, pour que seul un changement de `key` relance le chargement.
-  const loadRef = useRef(load)
-  useEffect(() => {
-    loadRef.current = load
-  })
-
-  useEffect(() => {
-    let active = true
-    loadRef
-      .current()
-      .then((data) => {
-        if (active) setLoaded({ key, state: { status: 'success', data } })
-      })
-      .catch(() => {
-        if (active) setLoaded({ key, state: { status: 'error' } })
-      })
-    return () => {
-      active = false
-    }
-  }, [key])
-
-  // Tant que le résultat chargé ne correspond pas à la clé demandée, on est en chargement.
-  return loaded?.key === key ? loaded.state : { status: 'loading' }
+import { useAuth } from '@/features/auth/hooks/useAuth'
+export type AsyncData<T> = | {status:'loading'} | {status:'error';error:string} | {status:'success';data:T;refreshError?:string}
+export function useAsyncData<T>(key:string,load:()=>Promise<T>,pollMs=0):AsyncData<T> {
+ const {user}=useAuth()
+ const scopedKey=`${user?.id ?? 'anonymous'}:${key}`
+ const [loaded,setLoaded]=useState<{key:string;state:AsyncData<T>}|null>(null)
+ const loadRef=useRef(load)
+ useEffect(()=>{loadRef.current=load})
+ useEffect(()=>{
+  let active=true
+  let timer:ReturnType<typeof setTimeout>|undefined
+  const run=async()=>{
+   if (pollMs && document.visibilityState === 'hidden') { timer=setTimeout(()=>void run(),pollMs);return }
+   try {const data=await loadRef.current(); if(active)setLoaded({key:scopedKey,state:{status:'success',data}})}
+   catch(e){if(active)setLoaded(previous=>{
+    const error=e instanceof Error ? e.message : 'Chargement impossible.'
+    return previous?.key===scopedKey && previous.state.status==='success'
+     ? {key:scopedKey,state:{...previous.state,refreshError:error}}
+     : {key:scopedKey,state:{status:'error',error}}
+   })}
+   finally {if(active && pollMs)timer=setTimeout(()=>void run(),pollMs)}
+  }
+  void run()
+  return ()=>{active=false;clearTimeout(timer)}
+ },[scopedKey,pollMs])
+ return loaded?.key===scopedKey?loaded.state:{status:'loading'}
 }

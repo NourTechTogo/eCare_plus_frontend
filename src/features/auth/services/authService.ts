@@ -2,6 +2,7 @@ import type { Credentials, Session, UserRole } from '@/features/auth/types/auth'
 import { ApiError, apiRequest, setAccessToken } from '@/lib/apiClient'
 
 const SESSION_KEY = 'ecare.session'
+export function currentUserId(): string | undefined { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null')?.user?.id } catch { return undefined } }
 
 /** Réponse de `POST /auth/connexion`. */
 interface SessionResponse {
@@ -45,6 +46,7 @@ function isSession(value: unknown): value is Session {
     typeof expiresAt === 'string' &&
     typeof user === 'object' &&
     user !== null &&
+    typeof (user as Record<string, unknown>).id === 'string' &&
     typeof (user as Record<string, unknown>).name === 'string' &&
     Object.values(rolesByClaim).includes((user as Record<string, unknown>).role as UserRole)
   )
@@ -54,7 +56,9 @@ function isSession(value: unknown): value is Session {
 export function restoreSession(): Session | null {
   try {
     const stored: unknown = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null')
-    if (!isSession(stored) || new Date(stored.expiresAt).getTime() <= Date.now()) {
+    if (!isSession(stored) || !Number.isFinite(Date.parse(stored.expiresAt)) || Date.parse(stored.expiresAt) <= Date.now()) {
+      if (stored) sessionStorage.setItem('ecare.sessionExpired', 'true')
+      setAccessToken(null)
       sessionStorage.removeItem(SESSION_KEY)
       return null
     }
@@ -93,6 +97,7 @@ export async function login({ identifier, password }: Credentials): Promise<Sess
       role,
     },
   }
+  sessionStorage.removeItem('ecare.sessionExpired')
   saveSession(session)
   setAccessToken(session.token)
   return session
@@ -158,6 +163,8 @@ export async function resetPassword(resetToken: string, newPassword: string): Pr
 }
 
 export function logout() {
+  const revoke = apiRequest<void>('/auth/deconnexion', { method: 'POST' })
+  void revoke.catch(() => { /* La session locale est toujours supprimée. */ })
   sessionStorage.removeItem(SESSION_KEY)
   setAccessToken(null)
 }

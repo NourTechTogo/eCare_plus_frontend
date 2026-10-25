@@ -1,5 +1,18 @@
 # eCare+ — Frontend Web
 
+## Livraison indépendante du 25 octobre 2026
+
+Branche `ecare_frontend_stable`, reliée uniquement à son dépôt GitHub. Les [ajouts détaillés](AJOUTS_RECENTS.md), [contrats API](docs/backend/API.md) et [validation / limites](docs/VALIDATION.md) sont disponibles dans ce dépôt.
+
+### Lancer le portail professionnel
+
+Prérequis : Node compatible avec Vite 8 et npm. Exécuter `npm ci`, copier `.env.example` en `.env`, régler `VITE_DEV_PROXY_TARGET=http://127.0.0.1:8081`, puis `npm run dev -- --host 127.0.0.1 --port 5183`. `VITE_API_URL=/api/v1` utilise le proxy local. En production, définir l'URL publique avant le build.
+
+Validation : `npm test`, `npm run lint`, `npm run build`. Aucun secret serveur dans une variable `VITE_*`.
+
+
+> Intégration au backend commun du 25 octobre 2026 : [bilan et preuves](docs/integration-clients/BILAN.md), [configuration des services](docs/integration-clients/CONFIGURATION.md), [contrats réels](docs/backend/API.md). La prévisualisation intégrée utilise le port 5183 et le backend 8081. Les descriptions historiques ci-dessous ne valent pas preuve de disponibilité des services externes.
+
 Frontend web de **eCare+**, une solution e-santé destinée au suivi des patients atteints de maladies chroniques, notamment le diabète et/ou l'hypertension.
 
 ## 🎯 Objectif

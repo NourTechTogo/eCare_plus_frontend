@@ -24,7 +24,7 @@ interface ControlButtonProps {
   onClick: () => void
 }
 
-function ControlButton({ label, iconPath, pressed, danger, disabled, onClick }: ControlButtonProps) {
+export function ControlButton({ label, iconPath, pressed, danger, disabled, onClick }: ControlButtonProps) {
   const tone = danger
     ? 'bg-danger text-white hover:shadow-lg'
     : pressed

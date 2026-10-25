@@ -2,5 +2,5 @@ import { listConversations } from '@/features/messaging/services/messagingServic
 import { useAsyncData } from '@/hooks/useAsyncData'
 
 export function useConversations() {
-  return useAsyncData('conversations', listConversations)
+  return useAsyncData('conversations', listConversations, 5000)
 }

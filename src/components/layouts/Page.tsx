@@ -8,6 +8,7 @@ interface PageProps {
   description?: string
   backLink?: { to: string; label: string }
   action?: ReactNode
+  contentClassName?: string
   children: ReactNode
 }
 
@@ -15,7 +16,7 @@ interface PageProps {
 const backIconPath = 'M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20v-2Z'
 
 /** Structure d'une page : titre dans la barre supérieure, puis contenu sur le fond de page. */
-export function Page({ title, description, backLink, action, children }: PageProps) {
+export function Page({ title, description, backLink, action, children, contentClassName = '' }: PageProps) {
   const titleSlot = useContext(PageTitleSlot)
 
   // Le titre de la page figure aussi dans l'onglet du navigateur.
@@ -52,7 +53,7 @@ export function Page({ title, description, backLink, action, children }: PagePro
         <header className="px-4 pt-6 sm:px-8 sm:pt-8">{heading}</header>
       )}
       {action && <div className="flex justify-end px-4 pt-6 sm:px-8">{action}</div>}
-      <div className="animate-stagger flex flex-col gap-6 px-4 py-6 sm:px-8 sm:pb-8">{children}</div>
+      <div className={`animate-stagger flex min-w-0 flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-8 sm:py-6 sm:pb-8 ${contentClassName}`}>{children}</div>
     </>
   )
 }

@@ -48,7 +48,7 @@ export function UserMenu({ name, role, email, profileTo, onLogout }: UserMenuPro
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 z-40 mt-3 w-72 animate-pop overflow-hidden rounded-3xl border border-line bg-surface shadow-xl">
+        <div className="absolute top-full right-0 z-40 mt-3 max-h-[70dvh] w-72 max-w-[calc(100vw-2rem)] animate-pop overflow-hidden rounded-3xl border border-line bg-surface shadow-xl">
           {/* L'identité mène aussi au profil. */}
           <div className="p-2">
             <Link

@@ -14,14 +14,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Jeton refusé par le backend : la session locale n'a plus de valeur.
   useEffect(() => {
-    setUnauthorizedHandler(logout)
+    setUnauthorizedHandler(() => { sessionStorage.setItem('ecare.sessionExpired', 'true'); logout() })
     return () => setUnauthorizedHandler(null)
   }, [logout])
 
   // Fin de session à l'expiration du jeton.
   useEffect(() => {
     if (!session) return
-    const timer = setTimeout(logout, new Date(session.expiresAt).getTime() - Date.now())
+    const timer = setTimeout(() => { sessionStorage.setItem('ecare.sessionExpired', 'true'); logout() }, new Date(session.expiresAt).getTime() - Date.now())
     return () => clearTimeout(timer)
   }, [session, logout])
 
@@ -40,5 +40,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [session, logout],
   )
 
-  return <AuthContext value={value}>{children}</AuthContext>
+  return <AuthContext value={value}><div key={session?.token ?? 'anonymous'} className="contents">{children}</div></AuthContext>
 }

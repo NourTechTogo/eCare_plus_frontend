@@ -44,10 +44,10 @@ export function PatientNotes({ patientId, authorName, summary = false, action }:
       setAdded((current) => [note, ...current])
       setText('')
       feedback.success('Observation ajoutée', 'Elle figure désormais dans le dossier du patient.')
-    } catch {
+    } catch (error) {
       feedback.error(
         "L'observation n'a pas pu être enregistrée",
-        'Votre texte est conservé. Vérifiez votre connexion puis réessayez.',
+        error instanceof Error ? error.message : 'Votre texte est conservé. Réessayez.',
       )
     } finally {
       setSubmitting(false)
@@ -84,7 +84,7 @@ export function PatientNotes({ patientId, authorName, summary = false, action }:
                 <p className="text-xs font-semibold tracking-wide text-muted uppercase">
                   {note.author} ({formatDateTime(note.createdAt)})
                 </p>
-                <p className="mt-2 text-sm whitespace-pre-line text-ink">{note.text}</p>
+                <p className="mt-2 text-sm whitespace-pre-line text-ink [overflow-wrap:anywhere]">{note.text}</p>
               </li>
             ))}
           </ul>

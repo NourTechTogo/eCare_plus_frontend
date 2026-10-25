@@ -2,14 +2,6 @@ import { Card } from '@/components/ui/Card'
 import { TrendChart, type TrendSeries } from '@/features/measurements/components/TrendChart'
 import type { Measurement } from '@/features/measurements/types/measurement'
 
-/*
- * Seuils d'alerte repris de l'écran « Configuration des règles de suivi » de la maquette.
- * Provisoires : ils restent à valider médicalement et viendront du backend.
- */
-const GLYCEMIA_THRESHOLD = 1.6
-const SYSTOLIC_THRESHOLD = 140
-const DIASTOLIC_THRESHOLD = 90
-
 const BLUE = 'var(--color-primary)'
 const VIOLET = 'var(--color-violet)'
 
@@ -55,12 +47,15 @@ export function MeasurementTrends({ measurements }: { measurements: Measurement[
   const pressure = measurements.filter((m) => m.kind === 'tension')
   const weight = measurements.filter((m) => m.kind === 'poids')
   const heartRate = measurements.filter((m) => m.kind === 'frequence_cardiaque')
+  const temperature = measurements.filter((m) => m.kind === 'temperature')
+  const saturation = measurements.filter((m) => m.kind === 'spo2')
   const mmHg = (value: number) => `${value} mmHg`
 
   const charts = [
     {
       title: 'Glycémie',
       series: drawable([
+        toSeries('Contexte non précisé', BLUE, glycemia.filter((m) => m.context === 'non_precise'), (m) => m.value),
         toSeries('À jeun', BLUE, glycemia.filter((m) => m.context === 'a_jeun'), (m) => m.value),
         toSeries(
           'Post-prandiale',
@@ -69,20 +64,30 @@ export function MeasurementTrends({ measurements }: { measurements: Measurement[
           (m) => m.value,
         ),
       ]),
-      threshold: GLYCEMIA_THRESHOLD,
+
       formatValue: (value: number) => `${twoDecimals.format(value)} g/L`,
     },
     {
       title: 'Tension artérielle systolique',
       series: drawable([toSeries('Systolique', BLUE, pressure, (m) => m.systolic)]),
-      threshold: SYSTOLIC_THRESHOLD,
+
       formatValue: mmHg,
     },
     {
       title: 'Tension artérielle diastolique',
       series: drawable([toSeries('Diastolique', VIOLET, pressure, (m) => m.diastolic)]),
-      threshold: DIASTOLIC_THRESHOLD,
+
       formatValue: mmHg,
+    },
+    {
+      title:'Température',
+      series:drawable([toSeries('Température',BLUE,temperature,m=>m.value)]),
+      formatValue:(value:number)=>`${oneDecimal.format(value)} °C`,
+    },
+    {
+      title:'SpO2',
+      series:drawable([toSeries('SpO2',BLUE,saturation,m=>m.value)]),
+      formatValue:(value:number)=>`${value} %`,
     },
     {
       title: 'Poids',
@@ -105,7 +110,7 @@ export function MeasurementTrends({ measurements }: { measurements: Measurement[
           <TrendChart key={chart.title} {...chart} />
         ))}
         <p className="text-xs text-muted">
-          La zone teintée et les points rouges signalent les valeurs au-dessus du seuil d'alerte.
+          Les alertes reposent sur les règles du serveur. Aucun seuil local n'est appliqué à ces courbes.
           Ces courbes montrent la tendance des mesures transmises ; elles ne constituent pas une
           interprétation médicale.
         </p>
