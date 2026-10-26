@@ -3,9 +3,9 @@ import { statusLabels } from '@/features/appointments/labels'
 import type { AppointmentStatus } from '@/features/appointments/types/appointment'
 
 const tones = {
-  planifie: 'amber',
+  demande: 'amber',
   confirme: 'blue',
-  reporte: 'violet',
+  refuse: 'red',
   annule: 'red',
   realise: 'green',
 } as const

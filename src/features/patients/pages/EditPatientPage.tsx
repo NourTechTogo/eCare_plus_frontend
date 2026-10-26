@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Page } from '@/components/layouts/Page'
-import { PatientForm } from '@/features/patients/components/PatientForm'
+import { PatientForm, type ReferentOption } from '@/features/patients/components/PatientForm'
 import { PatientUnavailable } from '@/features/patients/components/PatientUnavailable'
 import { usePatient } from '@/features/patients/hooks/usePatients'
 import { updatePatient } from '@/features/patients/services/patientService'
@@ -11,7 +11,7 @@ import { formatDate } from '@/utils/formatDate'
 
 const backLink = { to: '/patients', label: 'Retour à la liste des patients' }
 
-export function EditPatientPage() {
+export function EditPatientPage({ doctors }: { doctors: ReferentOption[] }) {
   const { patientId } = useParams()
   const navigate = useNavigate()
   const feedback = useFeedback()
@@ -32,7 +32,12 @@ export function EditPatientPage() {
     setSubmitting(true)
     try {
       await updatePatient(patient.id, input)
-      feedback.success('Dossier patient modifié', 'Les nouvelles informations sont enregistrées.')
+      feedback.success(
+        'Dossier patient modifié',
+        input.referentDoctorId !== patient.referentDoctorId
+          ? 'Le nouveau médecin référent a désormais accès au dossier.'
+          : 'Les nouvelles informations sont enregistrées.',
+      )
       await navigate(`/patients/${patient.id}`)
     } catch {
       feedback.error(
@@ -57,6 +62,7 @@ export function EditPatientPage() {
 
         <PatientForm
           initialPatient={patient}
+          doctors={doctors}
           submitting={submitting}
           onSubmit={(input) => void handleSubmit(input)}
           onCancel={() => void navigate(backLink.to)}

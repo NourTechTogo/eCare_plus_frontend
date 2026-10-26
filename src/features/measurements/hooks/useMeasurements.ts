@@ -3,9 +3,7 @@ import { listMeasurements } from '@/features/measurements/services/measurementSe
 import type { Measurement } from '@/features/measurements/types/measurement'
 
 type MeasurementsState =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'success'; measurements: Measurement[] }
+  { status: 'loading' } | { status: 'error' } | { status: 'success'; measurements: Measurement[] }
 
 export function useMeasurements(patientId: string): MeasurementsState {
   const [loaded, setLoaded] = useState<{ patientId: string; state: MeasurementsState } | null>(null)

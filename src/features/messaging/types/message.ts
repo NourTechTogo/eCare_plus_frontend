@@ -31,11 +31,15 @@ export interface Message {
   attachment?: MessageAttachment
   /** Date et heure d'envoi au format ISO-8601. */
   sentAt: string
+  /** Lecture par le destinataire : affichée comme accusé de lecture (EF-W3-2). */
+  readAt?: string
 }
 
 export interface Conversation {
   id: string
   patientId: string
+  /** Médecin référent : la conversation est un échange 1–1 avec lui (EF-W3-1). */
+  doctorId: string
   /*
    * Hypothèses d'affichage : le nom du patient, son numéro de dossier, le dernier message et
    * le nombre de non-lus ne figurent pas dans la réponse actuelle du backend.

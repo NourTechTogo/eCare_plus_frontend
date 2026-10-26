@@ -1,3 +1,12 @@
+import { usesLocalData } from '@/config/dataSource'
+import { isActiveAccount, setCurrentUser } from '@/demo/session'
+import {
+  LocalAuthError,
+  localLogin,
+  localRequestCode,
+  localResetPassword,
+  localVerifyCode,
+} from '@/features/auth/services/localAuth'
 import type { Credentials, Session, UserRole } from '@/features/auth/types/auth'
 import { ApiError, apiRequest, setAccessToken } from '@/lib/apiClient'
 
@@ -11,12 +20,15 @@ interface SessionResponse {
 }
 
 /*
- * Correspondance entre le rôle porté par le jeton et les rôles du portail web.
- * Le backend ne connaît pas de rôle « gestionnaire » : l'administrateur de structure en tient
- * lieu ici. Correspondance à confirmer ; les autres rôles n'ont pas d'écran web défini.
+ * Correspondance entre le rôle porté par le jeton et les rôles du portail web :
+ * - l'administrateur de structure gère les comptes des médecins et du personnel ;
+ * - le personnel de l'établissement gère les dossiers patients. Ce rôle reste à créer côté backend
+ *   (voir docs/CONTRAT_API.md) ;
+ * - l'infirmier, hors du MVP, n'a pas d'écran web.
  */
 const rolesByClaim: Partial<Record<string, UserRole>> = {
-  ADMINISTRATEUR_STRUCTURE: 'gestionnaire',
+  ADMINISTRATEUR_STRUCTURE: 'admin',
+  PERSONNEL_ETABLISSEMENT: 'personnel',
   MEDECIN: 'medecin',
 }
 
@@ -54,18 +66,36 @@ function isSession(value: unknown): value is Session {
 export function restoreSession(): Session | null {
   try {
     const stored: unknown = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null')
-    if (!isSession(stored) || new Date(stored.expiresAt).getTime() <= Date.now()) {
+    if (
+      !isSession(stored) ||
+      new Date(stored.expiresAt).getTime() <= Date.now() ||
+      // Sur la base locale, le compte a pu être supprimé ou désactivé depuis l'ouverture de la session.
+      (usesLocalData && !isActiveAccount(stored.user.id))
+    ) {
       sessionStorage.removeItem(SESSION_KEY)
       return null
     }
     setAccessToken(stored.token)
+    if (usesLocalData) setCurrentUser(stored.user.id)
     return stored
   } catch {
     return null
   }
 }
 
-export async function login({ identifier, password }: Credentials): Promise<Session> {
+export async function login(credentials: Credentials): Promise<Session> {
+  if (usesLocalData) {
+    try {
+      const session = await localLogin(credentials)
+      saveSession(session)
+      return session
+    } catch (error) {
+      if (error instanceof LocalAuthError) throw new InvalidCredentialsError()
+      throw error
+    }
+  }
+
+  const { identifier, password } = credentials
   let response: SessionResponse
   try {
     response = await apiRequest<SessionResponse>('/auth/connexion', {
@@ -116,6 +146,7 @@ export class InvalidResetCodeError extends Error {}
  * ou non à un compte, pour ne pas révéler quelles adresses sont inscrites.
  */
 export async function requestPasswordCode(email: string): Promise<void> {
+  if (usesLocalData) return localRequestCode(email)
   try {
     await apiRequest<void>('/auth/mot-de-passe/otp', {
       method: 'POST',
@@ -130,6 +161,14 @@ export async function requestPasswordCode(email: string): Promise<void> {
 
 /** Vérifie le code ; renvoie le jeton qui autorise à choisir un nouveau mot de passe. */
 export async function verifyPasswordCode(email: string, code: string): Promise<string> {
+  if (usesLocalData) {
+    try {
+      return await localVerifyCode(email, code)
+    } catch (error) {
+      if (error instanceof LocalAuthError) throw new InvalidResetCodeError()
+      throw error
+    }
+  }
   try {
     const response = await apiRequest<{ jetonReinitialisation: string }>(
       '/auth/mot-de-passe/otp/verifier',
@@ -145,6 +184,14 @@ export async function verifyPasswordCode(email: string, code: string): Promise<s
 }
 
 export async function resetPassword(resetToken: string, newPassword: string): Promise<void> {
+  if (usesLocalData) {
+    try {
+      return await localResetPassword(resetToken, newPassword)
+    } catch (error) {
+      if (error instanceof LocalAuthError) throw new InvalidResetCodeError()
+      throw error
+    }
+  }
   try {
     await apiRequest<void>('/auth/mot-de-passe/reinitialiser', {
       method: 'POST',
@@ -160,4 +207,5 @@ export async function resetPassword(resetToken: string, newPassword: string): Pr
 export function logout() {
   sessionStorage.removeItem(SESSION_KEY)
   setAccessToken(null)
+  setCurrentUser(null)
 }

@@ -1,6 +1,7 @@
 import type { UserRole } from '@/features/auth/types/auth'
 
 export const roleLabels: Record<UserRole, string> = {
-  gestionnaire: 'Gestionnaire',
+  admin: 'Administrateur',
+  personnel: "Personnel de l'établissement",
   medecin: 'Médecin',
 }

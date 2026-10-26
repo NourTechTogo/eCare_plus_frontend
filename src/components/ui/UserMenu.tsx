@@ -8,6 +8,7 @@ interface UserMenuProps {
   /** Rôle de l'utilisateur, affiché au-dessus de son nom. */
   role: string
   email?: string
+  avatarUrl?: string
   /** Adresse de la page profil de l'utilisateur. */
   profileTo: string
   onLogout: () => void
@@ -22,7 +23,7 @@ function getInitials(name: string) {
 }
 
 /** Pastille de l'utilisateur connecté ; elle ouvre un volet avec son identité et la déconnexion. */
-export function UserMenu({ name, role, email, profileTo, onLogout }: UserMenuProps) {
+export function UserMenu({ name, role, email, avatarUrl, profileTo, onLogout }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   const containerRef = useDismiss<HTMLDivElement>(open, close)
@@ -44,7 +45,7 @@ export function UserMenu({ name, role, email, profileTo, onLogout }: UserMenuPro
           <span className="text-xs font-semibold tracking-wide text-muted uppercase">{role}</span>
           <span className="max-w-40 truncate font-display text-sm font-bold text-ink">{name}</span>
         </span>
-        <Avatar initials={getInitials(name)} />
+        <Avatar initials={getInitials(name)} src={avatarUrl} />
       </button>
 
       {open && (
@@ -84,7 +85,10 @@ export function UserMenu({ name, role, email, profileTo, onLogout }: UserMenuPro
             </Link>
             <button
               type="button"
-              onClick={onLogout}
+              onClick={() => {
+                close()
+                onLogout()
+              }}
               className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-danger transition-colors hover:bg-danger-soft focus-visible:outline-2 focus-visible:outline-danger"
             >
               <svg

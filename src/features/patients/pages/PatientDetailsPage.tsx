@@ -2,9 +2,11 @@ import type { ReactNode } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { Page } from '@/components/layouts/Page'
 import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { tabId, tabPanelId } from '@/components/ui/tabIds'
 import { Tabs } from '@/components/ui/Tabs'
+import { ActivationInstructions } from '@/features/patients/components/ActivationInstructions'
 import { ConditionBadges } from '@/features/patients/components/ConditionBadges'
 import { PatientUnavailable } from '@/features/patients/components/PatientUnavailable'
 import { usePatient } from '@/features/patients/hooks/usePatients'
@@ -40,7 +42,20 @@ function Item({ label, value }: { label: string; value?: string }) {
   )
 }
 
-function PatientInformation({ patient }: { patient: Patient }) {
+const originLabels = {
+  etablissement: 'Créé par l’établissement',
+  auto_inscription: 'Inscription dans l’application, référencée par code QR',
+}
+
+function PatientInformation({
+  patient,
+  referentName,
+}: {
+  patient: Patient
+  referentName?: string
+}) {
+  const format = (value: number | undefined, unit: string) =>
+    value === undefined ? undefined : `${value.toLocaleString('fr-FR')} ${unit}`
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card title="Informations personnelles">
@@ -57,13 +72,38 @@ function PatientInformation({ patient }: { patient: Patient }) {
           <Item label="Téléphone" value={patient.phone} />
           <Item label="Adresse e-mail" value={patient.email} />
           <Item label="Adresse" value={patient.address} />
+          <Item label="Ville" value={patient.city} />
         </Details>
       </Card>
 
       <Card title="Suivi">
         <Details>
           <Item label="Pathologie suivie" value={conditionLabels[patient.condition]} />
+          <Item label="Médecin référent" value={referentName} />
+          <Item label="Origine du dossier" value={originLabels[patient.origin]} />
+          <Item
+            label="Consentement"
+            value={
+              patient.consentAcceptedAt
+                ? `Accepté le ${formatDate(patient.consentAcceptedAt)}`
+                : 'En attente de l’activation du compte'
+            }
+          />
         </Details>
+      </Card>
+
+      <Card title="Informations médicales">
+        <Details>
+          <Item label="Taille" value={format(patient.heightCm, 'cm')} />
+          <Item label="Poids" value={format(patient.weightKg, 'kg')} />
+          <Item label="Groupe sanguin" value={patient.bloodGroup} />
+          <Item label="Allergies" value={patient.allergies} />
+        </Details>
+        <div className="mt-4">
+          <Details>
+            <Item label="Antécédents médicaux" value={patient.history} />
+          </Details>
+        </div>
       </Card>
 
       <Card title="Personne à prévenir">
@@ -82,9 +122,17 @@ interface PatientDetailsPageProps {
    * Sans onglets, le dossier se limite aux informations administratives.
    */
   tabs?: PatientTab[]
+  /** Nom du médecin référent, affiché dans les informations du dossier. */
+  referentName?: (doctorId: string) => string | undefined
+  /** Actions placées dans la carte d'identité, par exemple « Écrire au patient ». */
+  renderActions?: (patient: Patient) => ReactNode
 }
 
-export function PatientDetailsPage({ tabs = [] }: PatientDetailsPageProps) {
+export function PatientDetailsPage({
+  tabs = [],
+  referentName,
+  renderActions,
+}: PatientDetailsPageProps) {
   const { patientId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const state = usePatient(patientId)
@@ -123,25 +171,31 @@ export function PatientDetailsPage({ tabs = [] }: PatientDetailsPageProps) {
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="font-display text-2xl font-bold text-ink">{fullName}</h2>
               <ConditionBadges condition={patient.condition} />
+              {patient.status === 'en_attente_activation' && (
+                <Badge tone="amber">Compte à activer</Badge>
+              )}
             </div>
             <p className="text-sm text-muted">
-              {born} le {formatDate(patient.birthDate)} ({getAge(patient.birthDate)} ans) • Dossier n°{' '}
-              {patient.fileNumber} • {patient.phone}
+              {born} le {formatDate(patient.birthDate)} ({getAge(patient.birthDate)} ans) • Dossier
+              n° {patient.fileNumber} • {patient.phone}
             </p>
           </div>
+          {renderActions && (
+            <div className="flex flex-wrap gap-2 sm:ml-auto">{renderActions(patient)}</div>
+          )}
         </div>
       </Card>
 
+      {patient.status === 'en_attente_activation' && <ActivationInstructions patient={patient} />}
+
       {tabs.length === 0 ? (
-        <PatientInformation patient={patient} />
+        <PatientInformation
+          patient={patient}
+          referentName={referentName?.(patient.referentDoctorId)}
+        />
       ) : (
         <>
-          <Tabs
-            label="Rubriques du dossier"
-            tabs={allTabs}
-            active={activeId}
-            onChange={openTab}
-          />
+          <Tabs label="Rubriques du dossier" tabs={allTabs} active={activeId} onChange={openTab} />
           <div
             key={activeId}
             id={tabPanelId(activeId)}
@@ -149,7 +203,14 @@ export function PatientDetailsPage({ tabs = [] }: PatientDetailsPageProps) {
             aria-labelledby={tabId(activeId)}
             className="flex animate-enter flex-col gap-6"
           >
-            {activeTab ? activeTab.render(patient, openTab) : <PatientInformation patient={patient} />}
+            {activeTab ? (
+              activeTab.render(patient, openTab)
+            ) : (
+              <PatientInformation
+                patient={patient}
+                referentName={referentName?.(patient.referentDoctorId)}
+              />
+            )}
           </div>
         </>
       )}

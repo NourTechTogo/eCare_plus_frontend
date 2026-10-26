@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Condition, PatientInput, Sex } from '@/features/patients/types/patient'
+import type { BloodGroup, Condition, PatientInput, Sex } from '@/features/patients/types/patient'
 
 export type PatientFormField =
   | 'lastName'
@@ -9,9 +9,16 @@ export type PatientFormField =
   | 'phone'
   | 'email'
   | 'address'
+  | 'city'
   | 'condition'
+  | 'referentDoctorId'
   | 'emergencyContactName'
   | 'emergencyContactPhone'
+  | 'heightCm'
+  | 'weightKg'
+  | 'bloodGroup'
+  | 'allergies'
+  | 'history'
 
 export type PatientFormValues = Record<PatientFormField, string>
 export type PatientFormErrors = Partial<Record<PatientFormField, string>>
@@ -25,9 +32,16 @@ export const patientFormFields: PatientFormField[] = [
   'phone',
   'email',
   'address',
+  'city',
   'condition',
+  'referentDoctorId',
   'emergencyContactName',
   'emergencyContactPhone',
+  'heightCm',
+  'weightKg',
+  'bloodGroup',
+  'allergies',
+  'history',
 ]
 
 const emptyValues: PatientFormValues = {
@@ -38,10 +52,19 @@ const emptyValues: PatientFormValues = {
   phone: '',
   email: '',
   address: '',
+  city: '',
   condition: '',
+  referentDoctorId: '',
   emergencyContactName: '',
   emergencyContactPhone: '',
+  heightCm: '',
+  weightKg: '',
+  bloodGroup: '',
+  allergies: '',
+  history: '',
 }
+
+export const bloodGroups: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 const MAX_AGE_YEARS = 120
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -60,6 +83,20 @@ function isSex(value: string): value is Sex {
 
 function isCondition(value: string): value is Condition {
   return value === 'diabete' || value === 'hypertension' || value === 'diabete_hypertension'
+}
+
+function isBloodGroup(value: string): value is BloodGroup {
+  return (bloodGroups as string[]).includes(value)
+}
+
+/** Valeur numérique facultative, comprise entre `min` et `max`. */
+function validateRange(value: string, min: number, max: number, unit: string) {
+  if (!value) return undefined
+  const number = Number(value.replace(',', '.'))
+  if (Number.isNaN(number) || number < min || number > max) {
+    return `Saisissez une valeur entre ${min} et ${max} ${unit}.`
+  }
+  return undefined
 }
 
 function validatePhone(value: string) {
@@ -106,10 +143,23 @@ function validateField(field: PatientFormField, rawValue: string): string | unde
         : undefined
     case 'condition':
       return isCondition(value) ? undefined : 'Sélectionnez la pathologie suivie.'
-    case 'emergencyContactPhone':
-      return value ? validatePhone(value) : undefined
-    case 'address':
+    case 'referentDoctorId':
+      return value ? undefined : 'Choisissez le médecin référent du patient.'
+    // Le contact d'urgence fait partie de l'identité minimale obligatoire (RG-W1-3).
     case 'emergencyContactName':
+      return validateName(value, 'Saisissez le nom de la personne à prévenir.')
+    case 'emergencyContactPhone':
+      return value ? validatePhone(value) : 'Saisissez le téléphone de la personne à prévenir.'
+    case 'heightCm':
+      return validateRange(value, 50, 250, 'cm')
+    case 'weightKg':
+      return validateRange(value, 2, 300, 'kg')
+    case 'bloodGroup':
+      return value && !isBloodGroup(value) ? 'Sélectionnez un groupe sanguin.' : undefined
+    case 'address':
+    case 'city':
+    case 'allergies':
+    case 'history':
       return undefined
   }
 }
@@ -129,6 +179,8 @@ function toPatientInput(values: PatientFormValues): PatientInput | null {
   if (!isSex(sex) || !isCondition(condition)) return null
 
   const optional = (value: string) => value.trim() || undefined
+  const number = (value: string) => (value.trim() ? Number(value.replace(',', '.')) : undefined)
+  const bloodGroup = values.bloodGroup
   return {
     lastName: values.lastName.trim(),
     firstName: values.firstName.trim(),
@@ -136,10 +188,17 @@ function toPatientInput(values: PatientFormValues): PatientInput | null {
     birthDate: values.birthDate,
     phone: values.phone.trim(),
     condition,
+    referentDoctorId: values.referentDoctorId,
     email: optional(values.email),
     address: optional(values.address),
+    city: optional(values.city),
     emergencyContactName: optional(values.emergencyContactName),
     emergencyContactPhone: optional(values.emergencyContactPhone),
+    heightCm: number(values.heightCm),
+    weightKg: number(values.weightKg),
+    bloodGroup: isBloodGroup(bloodGroup) ? bloodGroup : undefined,
+    allergies: optional(values.allergies),
+    history: optional(values.history),
   }
 }
 
@@ -152,9 +211,16 @@ function toFormValues(patient: PatientInput): PatientFormValues {
     phone: patient.phone,
     email: patient.email ?? '',
     address: patient.address ?? '',
+    city: patient.city ?? '',
     condition: patient.condition,
+    referentDoctorId: patient.referentDoctorId,
     emergencyContactName: patient.emergencyContactName ?? '',
     emergencyContactPhone: patient.emergencyContactPhone ?? '',
+    heightCm: patient.heightCm === undefined ? '' : String(patient.heightCm),
+    weightKg: patient.weightKg === undefined ? '' : String(patient.weightKg),
+    bloodGroup: patient.bloodGroup ?? '',
+    allergies: patient.allergies ?? '',
+    history: patient.history ?? '',
   }
 }
 

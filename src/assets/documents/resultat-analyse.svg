@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="1188" viewBox="0 0 840 1188" font-family="'Segoe UI', Arial, sans-serif">
+  <rect width="840" height="1188" fill="#ffffff"/>
+  <rect x="0" y="0" width="840" height="150" fill="#0f5a7a"/>
+  <text x="60" y="78" font-size="32" font-weight="bold" fill="#ffffff">Laboratoire d'analyses médicales</text>
+  <text x="60" y="114" font-size="18" fill="#d7ecf5">Biochimie · Hématologie · Lomé</text>
+  <text x="60" y="210" font-size="20" fill="#1f2a33">Compte rendu d'analyses</text>
+  <text x="60" y="246" font-size="17" fill="#4b5b68">Patient : Kodjo Adjovi · Né le 21/07/1959</text>
+  <text x="60" y="274" font-size="17" fill="#4b5b68">Prélèvement du 28/09/2026 à 07:30 · À jeun</text>
+  <text x="60" y="302" font-size="17" fill="#4b5b68">Prescripteur : Dr Kofi Agbeko</text>
+  <rect x="60" y="340" width="720" height="48" fill="#eef5f8"/>
+  <text x="80" y="371" font-size="17" font-weight="bold" fill="#1f2a33">Analyse</text>
+  <text x="420" y="371" font-size="17" font-weight="bold" fill="#1f2a33">Résultat</text>
+  <text x="590" y="371" font-size="17" font-weight="bold" fill="#1f2a33">Valeurs de référence</text>
+  <g font-size="17" fill="#1f2a33">
+    <text x="80" y="432">Glycémie à jeun</text><text x="420" y="432" font-weight="bold">1,32 g/L</text><text x="590" y="432" fill="#4b5b68">0,70 – 1,10</text>
+    <line x1="60" y1="452" x2="780" y2="452" stroke="#e1e8ec"/>
+    <text x="80" y="492">Hémoglobine glyquée (HbA1c)</text><text x="420" y="492" font-weight="bold">7,4 %</text><text x="590" y="492" fill="#4b5b68">4,0 – 6,0</text>
+    <line x1="60" y1="512" x2="780" y2="512" stroke="#e1e8ec"/>
+    <text x="80" y="552">Créatinine</text><text x="420" y="552" font-weight="bold">9,8 mg/L</text><text x="590" y="552" fill="#4b5b68">7,0 – 12,0</text>
+    <line x1="60" y1="572" x2="780" y2="572" stroke="#e1e8ec"/>
+    <text x="80" y="612">Cholestérol total</text><text x="420" y="612" font-weight="bold">2,05 g/L</text><text x="590" y="612" fill="#4b5b68">&lt; 2,00</text>
+    <line x1="60" y1="632" x2="780" y2="632" stroke="#e1e8ec"/>
+    <text x="80" y="672">Triglycérides</text><text x="420" y="672" font-weight="bold">1,48 g/L</text><text x="590" y="672" fill="#4b5b68">&lt; 1,50</text>
+  </g>
+  <text x="60" y="780" font-size="16" fill="#4b5b68">Résultats validés par le biologiste responsable.</text>
+  <text x="60" y="808" font-size="16" fill="#4b5b68">Document à présenter à votre médecin traitant.</text>
+</svg>

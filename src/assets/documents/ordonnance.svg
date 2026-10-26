@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="1188" viewBox="0 0 840 1188" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="840" height="1188" fill="#fdfcf8"/>
+  <rect x="40" y="40" width="760" height="1108" fill="none" stroke="#d9d4c7" stroke-width="2"/>
+  <text x="80" y="120" font-size="30" font-weight="bold" fill="#1f3b57">Cabinet de diabétologie</text>
+  <text x="80" y="156" font-size="20" fill="#3d4f61">Dr Kofi Agbeko, diabétologue-endocrinologue</text>
+  <text x="80" y="186" font-size="17" fill="#5b6b7a">Ordre des médecins n° TG-0418 · Lomé</text>
+  <line x1="80" y1="216" x2="760" y2="216" stroke="#1f3b57" stroke-width="2"/>
+  <text x="560" y="266" font-size="18" fill="#3d4f61">Lomé, le 12/08/2026</text>
+  <text x="80" y="316" font-size="20" fill="#1f2a33">Patient : M. Kodjo Adjovi</text>
+  <text x="80" y="346" font-size="18" fill="#3d4f61">Né le 21/07/1959</text>
+  <text x="80" y="430" font-size="28" font-weight="bold" fill="#1f3b57">ORDONNANCE</text>
+  <text x="80" y="500" font-size="21" fill="#1f2a33">1. Metformine 850 mg, comprimé</text>
+  <text x="110" y="532" font-size="18" fill="#3d4f61">Un comprimé matin et soir, au cours des repas.</text>
+  <text x="110" y="560" font-size="18" fill="#3d4f61">Traitement pour trois mois.</text>
+  <text x="80" y="626" font-size="21" fill="#1f2a33">2. Amlodipine 5 mg, comprimé</text>
+  <text x="110" y="658" font-size="18" fill="#3d4f61">Un comprimé le matin.</text>
+  <text x="110" y="686" font-size="18" fill="#3d4f61">Traitement pour trois mois.</text>
+  <text x="80" y="752" font-size="21" fill="#1f2a33">3. Bandelettes de glycémie, boîte de 50</text>
+  <text x="110" y="784" font-size="18" fill="#3d4f61">Contrôle à jeun chaque matin, et après le repas du soir.</text>
+  <text x="80" y="880" font-size="18" fill="#3d4f61">Renouvellement : non.</text>
+  <text x="520" y="980" font-size="18" fill="#3d4f61">Signature et cachet</text>
+  <path d="M520 1040 c30 -40 60 20 90 -10 s40 -30 70 0" fill="none" stroke="#1f3b57" stroke-width="2.5"/>
+  <circle cx="660" cy="1040" r="46" fill="none" stroke="#7a9ab8" stroke-width="2" stroke-dasharray="4 3"/>
+</svg>

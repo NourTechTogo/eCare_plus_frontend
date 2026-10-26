@@ -65,6 +65,7 @@ export function AppLayout({ navItems, user, topAction, onLogout }: AppLayoutProp
             name={user.name}
             role={user.role}
             email={user.email}
+            avatarUrl={user.avatarUrl}
             profileTo="/profil"
             onLogout={onLogout}
           />

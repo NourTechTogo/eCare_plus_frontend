@@ -1,4 +1,5 @@
-export type UserRole = 'gestionnaire' | 'medecin'
+/** Profils du portail web (CDC §1.6.1) ; le personnel de l'établissement assure aussi l'administration des comptes. */
+export type UserRole = 'admin' | 'personnel' | 'medecin'
 
 export interface User {
   id: string
@@ -10,6 +11,8 @@ export interface User {
   phone?: string
   email?: string
   role: UserRole
+  avatarUrl?: string
+  specialty?: string
 }
 
 export interface Session {

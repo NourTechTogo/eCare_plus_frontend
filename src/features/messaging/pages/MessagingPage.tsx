@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 import { Page } from '@/components/layouts/Page'
 import { Alert } from '@/components/ui/Alert'
 import { ConversationList } from '@/features/messaging/components/ConversationList'
 import { ConversationThread } from '@/features/messaging/components/ConversationThread'
 import { useConversations } from '@/features/messaging/hooks/useConversations'
 import { markConversationRead } from '@/features/messaging/services/messagingService'
+import type { CallType } from '@/features/messaging/types/call'
 import type { Conversation, Message } from '@/features/messaging/types/message'
 
 const pageDescription = 'Échanges avec les patients suivis'
@@ -13,6 +14,16 @@ const pageDescription = 'Échanges avec les patients suivis'
 export function MessagingPage() {
   const { conversationId } = useParams()
   const state = useConversations()
+  // `?appel=audio` ou `?appel=video` lance l'appel dès l'ouverture de la conversation.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedCall = searchParams.get('appel')
+  const [initialCall] = useState<CallType | undefined>(() =>
+    requestedCall === 'audio' || requestedCall === 'video' ? requestedCall : undefined,
+  )
+  useEffect(() => {
+    // Le paramètre est retiré : recharger la page ne relance pas l'appel.
+    if (requestedCall) setSearchParams({}, { replace: true })
+  }, [requestedCall, setSearchParams])
   // Messages envoyés et conversations lues depuis l'ouverture de l'écran.
   const [sent, setSent] = useState<Message[]>([])
   const [readIds, setReadIds] = useState<string[]>([])
@@ -72,13 +83,16 @@ export function MessagingPage() {
           <ConversationList conversations={conversations} />
         </div>
 
-        <div className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${conversationId ? 'flex' : 'hidden'}`}>
+        <div
+          className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${conversationId ? 'flex' : 'hidden'}`}
+        >
           {selected ? (
             <ConversationThread
               key={selected.id}
               conversation={selected}
               sent={sent}
               onSent={(message) => setSent((current) => [...current, message])}
+              initialCall={initialCall}
             />
           ) : (
             <div className="m-auto flex flex-col items-center gap-4 p-6 text-center">

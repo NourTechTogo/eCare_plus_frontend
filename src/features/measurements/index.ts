@@ -1,3 +1,6 @@
+export { LevelBadge } from './components/LevelBadge'
 export { PatientMeasurements } from './components/PatientMeasurements'
+export { PatientThresholds } from './components/PatientThresholds'
 export { useLatestMeasurements } from './hooks/useLatestMeasurements'
 export { formatMeasurementValue, measurementLabel } from './labels'
+export { measurementLevel } from './thresholds'

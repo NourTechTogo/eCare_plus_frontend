@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { TextField } from '@/components/ui/TextField'
-import type { User } from '@/features/auth'
+import { roleLabels, type User } from '@/features/auth'
 import { updateProfile, type ProfileChanges } from '@/features/profile/services/profileService'
 import { useFeedback } from '@/hooks/useFeedback'
 
@@ -70,7 +71,7 @@ export function PersonalInfoForm({ user, onSaved }: PersonalInfoFormProps) {
     setSaving(true)
     try {
       onSaved(await updateProfile(user, values))
-      feedback.success('Profil mis à jour', 'Vos informations sont enregistrées.')
+      feedback.success('Profil mis à jour', 'Vos informations ont été enregistrées avec succès.')
     } catch {
       feedback.error(
         "Le profil n'a pas pu être mis à jour",
@@ -82,33 +83,82 @@ export function PersonalInfoForm({ user, onSaved }: PersonalInfoFormProps) {
   }
 
   return (
-    <Card title="Informations personnelles">
+    <Card
+      title="Informations personnelles"
+      subtitle="Coordonnées visibles par vos collègues et utilisées pour les communications"
+    >
       <form
         noValidate
         onSubmit={(event) => void handleSubmit(event)}
-        className="flex flex-col gap-5"
+        className="flex flex-col gap-6"
       >
-        <fieldset disabled={saving} className="grid min-w-0 gap-5 sm:grid-cols-2">
-          <TextField label="Prénoms" autoComplete="given-name" required {...bind('firstName')} />
-          <TextField label="Nom" autoComplete="family-name" required {...bind('lastName')} />
-          <TextField
-            label="Téléphone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="+228 90 00 00 00"
-            {...bind('phone')}
-          />
-          <TextField
-            label="Adresse e-mail"
-            type="email"
-            value={user.email ?? ''}
-            readOnly
-            disabled
-            showRequirement={false}
-            hint="Elle sert à vous connecter. Pour la changer, contactez l'administrateur de votre structure."
-          />
-        </fieldset>
-        <div className="flex flex-wrap justify-end gap-3">
+        {changed && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-warning-line bg-warning-soft px-4 py-3 text-xs font-medium text-warning">
+            <span className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-warning" />
+              Vous avez des modifications non enregistrées.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setValues(initial)
+                setErrors({})
+              }}
+              className="font-semibold underline hover:text-ink"
+            >
+              Rétablir
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-4">
+          <h3 className="text-xs font-semibold tracking-wider text-muted uppercase">
+            Identité et coordonnées
+          </h3>
+          <fieldset disabled={saving} className="grid min-w-0 gap-5 sm:grid-cols-2">
+            <TextField label="Prénoms" autoComplete="given-name" required {...bind('firstName')} />
+            <TextField label="Nom" autoComplete="family-name" required {...bind('lastName')} />
+            <div className="sm:col-span-2">
+              <TextField
+                label="Numéro de téléphone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="+228 90 00 00 00"
+                hint="Utilisé pour les notifications d'urgence et les rappels."
+                {...bind('phone')}
+              />
+            </div>
+          </fieldset>
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-line pt-5">
+          <h3 className="text-xs font-semibold tracking-wider text-muted uppercase">
+            Paramètres institutionnels
+          </h3>
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+            <TextField
+              label="Adresse e-mail"
+              type="email"
+              value={user.email ?? ''}
+              readOnly
+              disabled
+              showRequirement={false}
+              hint="Identifiant de connexion officiel. Non modifiable directement."
+            />
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-muted">Rôle sur la plateforme</span>
+              <div className="flex h-11 items-center justify-between rounded-2xl border border-line bg-page px-3.5">
+                <span className="text-sm font-semibold text-ink">{roleLabels[user.role]}</span>
+                <Badge tone="blue">Attribué</Badge>
+              </div>
+              <p className="text-xs text-muted">
+                Défini par l’établissement. Contactez l’administrateur pour tout changement.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
           {changed && (
             <Button
               variant="secondary"
@@ -122,7 +172,7 @@ export function PersonalInfoForm({ user, onSaved }: PersonalInfoFormProps) {
             </Button>
           )}
           <Button type="submit" loading={saving} disabled={!changed}>
-            Enregistrer
+            Enregistrer les modifications
           </Button>
         </div>
       </form>

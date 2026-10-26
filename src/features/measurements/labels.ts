@@ -1,10 +1,26 @@
-import type { Measurement, MeasurementKind } from '@/features/measurements/types/measurement'
+import type {
+  Measurement,
+  MeasurementKind,
+  MeasurementLevel,
+  MeasurementSource,
+} from '@/features/measurements/types/measurement'
 
 export const kindLabels: Record<MeasurementKind, string> = {
-  glycemie: 'Glycémie',
   tension: 'Tension artérielle',
-  poids: 'Poids',
   frequence_cardiaque: 'Fréquence cardiaque',
+  glycemie: 'Glycémie',
+  poids: 'Poids',
+}
+
+export const sourceLabels: Record<MeasurementSource, string> = {
+  manuelle: 'Saisie manuelle',
+  montre: 'Montre connectée',
+}
+
+export const levelLabels: Record<MeasurementLevel, string> = {
+  normal: 'Normal',
+  attention: 'Attention',
+  critique: 'Critique',
 }
 
 const decimal = (digits: number) =>
@@ -30,4 +46,22 @@ export function formatMeasurementValue(measurement: Measurement) {
     case 'frequence_cardiaque':
       return `${measurement.value} bpm`
   }
+}
+
+/** Nombre avec la précision usuelle de sa grandeur, pour les seuils et les axes. */
+export function formatMetricValue(value: number, unit: string) {
+  const formatted =
+    unit === 'g/L'
+      ? twoDecimals.format(value)
+      : unit === '°C'
+        ? oneDecimal.format(value)
+        : String(value)
+  return `${formatted} ${unit}`
+}
+
+/** Couleur du texte d'une valeur selon son état. */
+export const levelTextClassName: Record<MeasurementLevel, string> = {
+  normal: 'text-ink',
+  attention: 'text-warning',
+  critique: 'text-danger',
 }

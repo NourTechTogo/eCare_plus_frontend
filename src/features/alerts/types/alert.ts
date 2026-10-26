@@ -1,25 +1,34 @@
-export type AlertPriority = 'haute' | 'moyenne'
+import type { MeasurementKind } from '@/features/measurements/types/measurement'
 
-export interface AlertResolution {
-  /** Observations saisies par le professionnel à la clôture. */
-  note: string
-  closedAt: string
-  closedBy: string
-}
+/** Gravité (EF-W2-12) : hors plage normale, ou hors plage dangereuse. */
+export type AlertSeverity = 'attention' | 'critique'
+
+/** Cycle de vie d'une alerte (EF-W2-15). */
+export type AlertStatus = 'nouvelle' | 'vue' | 'traitee'
 
 export interface Alert {
   id: string
   patientId: string
   patientName: string
   patientFileNumber: string
+  /** Médecin référent du patient, destinataire de l'alerte. */
+  doctorId: string
+  /** Mesure à l'origine de l'alerte. */
+  measurementId: string
+  kind: MeasurementKind
   /** Ce qui a déclenché l'alerte, formulé comme un constat et non comme un diagnostic. */
   trigger: string
   /** Valeur mesurée, avec son unité. */
   value: string
-  /** Seuil de la règle de suivi qui a été dépassé, avec son unité. */
+  /** Seuil franchi, avec son unité. */
   threshold: string
-  priority: AlertPriority
+  severity: AlertSeverity
+  status: AlertStatus
   triggeredAt: string
-  /** Présent une fois l'alerte clôturée. */
-  resolution?: AlertResolution
+  /** Première consultation par le médecin. */
+  seenAt?: string
+  handledAt?: string
+  handledBy?: string
+  /** Commentaire obligatoire au traitement de l'alerte. */
+  handledComment?: string
 }

@@ -1,51 +1,77 @@
-import type { ClinicalNote } from '@/features/notes/types/note'
+import { requireDoctor, requirePatient } from '@/demo/access'
+import { mutate, PlatformError, query } from '@/demo/database'
+import { currentAccount, displayName } from '@/demo/session'
+import type { ClinicalNote, NoteVisibility } from '@/features/notes/types/note'
 
 /*
- * DONNÉES FICTIVES — aucun appel API.
- * Ce service simule les observations cliniques tant que le contrat d'API n'est pas défini.
- * Les notes ci-dessous sont inventées ; celles ajoutées sont perdues au rechargement.
+ * Commentaires et notes (EF-W3-14) : chacun gère les siennes ; une note privée n'est visible que
+ * de son auteur, une note partagée l'est aussi de l'autre partie. Routes attendues :
+ * GET|POST /patients/{id}/notes, PATCH|DELETE /notes/{id} (voir docs/CONTRAT_API.md).
  */
 
-const SIMULATED_DELAY_MS = 700
-
-const notes: ClinicalNote[] = [
-  {
-    id: 'note-1',
-    patientId: 'demo-3',
-    author: 'Dr Kofi Démo',
-    createdAt: '2026-10-05T18:45:00',
-    text: 'Le patient signale des mesures plus élevées après le repas du soir. Mesures à poursuivre sur les prochains jours avant le prochain échange.',
-  },
-  {
-    id: 'note-2',
-    patientId: 'demo-2',
-    author: 'Dr Kofi Démo',
-    createdAt: '2026-10-02T10:20:00',
-    text: 'Patiente jointe par téléphone : mesures prises le matin et le soir, sans difficulté particulière.',
-  },
-]
-
-function simulateNetwork() {
-  return new Promise<void>((resolve) => setTimeout(resolve, SIMULATED_DELAY_MS))
-}
-
-/** Observations d'un patient, de la plus récente à la plus ancienne. */
+/** Notes visibles par l'utilisateur connecté, de la plus récente à la plus ancienne. */
 export async function listNotes(patientId: string): Promise<ClinicalNote[]> {
-  await simulateNetwork()
-  return notes
-    .filter((note) => note.patientId === patientId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return query((db) => {
+    requirePatient(db, patientId)
+    const viewer = currentAccount(db)
+    return db.notes
+      .filter(
+        (note) =>
+          note.patientId === patientId &&
+          (note.visibility === 'partagee' || note.authorId === viewer.id),
+      )
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  })
 }
 
-export async function addNote(patientId: string, text: string, author: string): Promise<ClinicalNote> {
-  await simulateNetwork()
-  const note: ClinicalNote = {
-    id: crypto.randomUUID(),
-    patientId,
-    author,
-    createdAt: new Date().toISOString(),
-    text,
-  }
-  notes.push(note)
+export async function addNote(
+  patientId: string,
+  text: string,
+  visibility: NoteVisibility,
+): Promise<ClinicalNote> {
+  return mutate((db) => {
+    const doctor = requireDoctor(db)
+    requirePatient(db, patientId)
+    const note: ClinicalNote = {
+      id: `note-${crypto.randomUUID().slice(0, 8)}`,
+      patientId,
+      authorId: doctor.id,
+      author: displayName(doctor),
+      authorRole: 'medecin',
+      visibility,
+      createdAt: new Date().toISOString(),
+      text,
+    }
+    db.notes.push(note)
+    return note
+  })
+}
+
+function ownNote(noteId: string, authorId: string, notes: ClinicalNote[]) {
+  const note = notes.find((candidate) => candidate.id === noteId)
+  if (!note || note.authorId !== authorId) throw new PlatformError('Note introuvable')
   return note
+}
+
+export async function updateNote(
+  noteId: string,
+  text: string,
+  visibility: NoteVisibility,
+): Promise<ClinicalNote> {
+  return mutate((db) => {
+    const doctor = requireDoctor(db)
+    const note = ownNote(noteId, doctor.id, db.notes)
+    note.text = text
+    note.visibility = visibility
+    note.updatedAt = new Date().toISOString()
+    return note
+  })
+}
+
+export async function deleteNote(noteId: string): Promise<void> {
+  await mutate((db) => {
+    const doctor = requireDoctor(db)
+    ownNote(noteId, doctor.id, db.notes)
+    db.notes = db.notes.filter((note) => note.id !== noteId)
+  })
 }

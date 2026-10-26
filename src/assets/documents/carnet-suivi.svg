@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="1188" viewBox="0 0 840 1188" font-family="'Segoe Print', 'Comic Sans MS', cursive">
+  <rect width="840" height="1188" fill="#fbf7ea"/>
+  <g stroke="#c9d8e8" stroke-width="1.5">
+    <line x1="0" y1="200" x2="840" y2="200"/><line x1="0" y1="260" x2="840" y2="260"/><line x1="0" y1="320" x2="840" y2="320"/>
+    <line x1="0" y1="380" x2="840" y2="380"/><line x1="0" y1="440" x2="840" y2="440"/><line x1="0" y1="500" x2="840" y2="500"/>
+    <line x1="0" y1="560" x2="840" y2="560"/><line x1="0" y1="620" x2="840" y2="620"/><line x1="0" y1="680" x2="840" y2="680"/>
+    <line x1="0" y1="740" x2="840" y2="740"/><line x1="0" y1="800" x2="840" y2="800"/><line x1="0" y1="860" x2="840" y2="860"/>
+  </g>
+  <line x1="110" y1="0" x2="110" y2="1188" stroke="#e8a3a3" stroke-width="2"/>
+  <text x="140" y="120" font-size="34" fill="#2b3a67">Carnet de suivi tension</text>
+  <text x="140" y="184" font-size="22" fill="#2b3a67">Date        Matin        Soir</text>
+  <g font-size="22" fill="#33415c">
+    <text x="140" y="244">02/06      14/9         13/8</text>
+    <text x="140" y="304">03/06      15/9         14/9</text>
+    <text x="140" y="364">04/06      13/8         13/8</text>
+    <text x="140" y="424">05/06      16/10        15/9</text>
+    <text x="140" y="484">06/06      14/9         14/8</text>
+    <text x="140" y="544">07/06      13/8         13/9</text>
+    <text x="140" y="604">09/06      14/8         —</text>
+    <text x="140" y="664">10/06      15/9         14/9</text>
+  </g>
+  <text x="140" y="780" font-size="20" fill="#7a4d4d">Vertiges le 05/06 au réveil</text>
+</svg>

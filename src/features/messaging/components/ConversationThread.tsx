@@ -84,7 +84,9 @@ function ComposerButton({
       title={label}
       onClick={onClick}
       className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60 ${
-        primary ? 'bg-primary text-white hover:bg-primary-strong' : 'text-muted hover:bg-danger-soft hover:text-danger'
+        primary
+          ? 'bg-primary text-white hover:bg-primary-strong'
+          : 'text-muted hover:bg-danger-soft hover:text-danger'
       }`}
     >
       <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -131,17 +133,24 @@ interface ConversationThreadProps {
   /** Messages envoyés depuis l'ouverture de l'écran, toutes conversations confondues. */
   sent: Message[]
   onSent: (message: Message) => void
+  /** Appel lancé dès l'ouverture, par exemple depuis une alerte (« Appeler le patient »). */
+  initialCall?: CallType
 }
 
 /** Fil d'une conversation : messages reçus et envoyés, puis saisie d'un nouveau message. */
-export function ConversationThread({ conversation, sent, onSent }: ConversationThreadProps) {
+export function ConversationThread({
+  conversation,
+  sent,
+  onSent,
+  initialCall,
+}: ConversationThreadProps) {
   const state = useAsyncData(`messages:${conversation.id}`, () => listMessages(conversation.id))
   const callsState = useAsyncData(`calls:${conversation.id}`, () => listCalls(conversation.id))
   const fieldId = useId()
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   // Appel en cours, et appels terminés depuis l'ouverture de la conversation.
-  const [activeCall, setActiveCall] = useState<CallType>()
+  const [activeCall, setActiveCall] = useState<CallType | undefined>(initialCall)
   const [endedCalls, setEndedCalls] = useState<CallRecord[]>([])
   const voice = useVoiceRecorder()
   // Pièce jointe choisie, pas encore envoyée, et refus d'un fichier non accepté.
@@ -224,7 +233,12 @@ export function ConversationThread({ conversation, sent, onSent }: ConversationT
             at: message.sentAt,
             message,
           })),
-          ...calls.map((call) => ({ kind: 'call' as const, id: call.id, at: call.startedAt, call })),
+          ...calls.map((call) => ({
+            kind: 'call' as const,
+            id: call.id,
+            at: call.startedAt,
+            call,
+          })),
         ].sort((a, b) => a.at.localeCompare(b.at))
       : []
 
@@ -385,13 +399,17 @@ export function ConversationThread({ conversation, sent, onSent }: ConversationT
                     >
                       <svg
                         className={`size-4 shrink-0 ${
-                          item.call.durationSeconds === undefined ? 'text-danger' : 'text-primary-strong'
+                          item.call.durationSeconds === undefined
+                            ? 'text-danger'
+                            : 'text-primary-strong'
                         }`}
                         viewBox="0 0 24 24"
                         fill="currentColor"
                         aria-hidden="true"
                       >
-                        <path d={item.call.type === 'video' ? videoCallIconPath : audioCallIconPath} />
+                        <path
+                          d={item.call.type === 'video' ? videoCallIconPath : audioCallIconPath}
+                        />
                       </svg>
                       <span className="font-semibold text-ink">{callSummary(item.call)}</span>
                       <span className="text-muted">{formatTime(item.at)}</span>
@@ -406,7 +424,9 @@ export function ConversationThread({ conversation, sent, onSent }: ConversationT
                       }`}
                     >
                       <span className="sr-only">
-                        {item.message.author === 'professionnel' ? 'Vous' : conversation.patientName}
+                        {item.message.author === 'professionnel'
+                          ? 'Vous'
+                          : conversation.patientName}
                       </span>
                       <div
                         className={`rounded-3xl text-sm whitespace-pre-line shadow-sm ${
@@ -445,7 +465,14 @@ export function ConversationThread({ conversation, sent, onSent }: ConversationT
                           <p>{item.message.text}</p>
                         )}
                       </div>
-                      <p className="px-2 text-xs text-muted">{formatTime(item.at)}</p>
+                      <p className="px-2 text-xs text-muted">
+                        {formatTime(item.at)}
+                        {item.message.author === 'professionnel' && (
+                          <span className={item.message.readAt ? 'text-primary-strong' : undefined}>
+                            {item.message.readAt ? ' · Lu' : ' · Envoyé'}
+                          </span>
+                        )}
+                      </p>
                     </li>
                   )}
                 </Fragment>
@@ -498,8 +525,15 @@ export function ConversationThread({ conversation, sent, onSent }: ConversationT
 
           {voice.state.status === 'recording' ? (
             <div className="flex items-center gap-3 rounded-4xl border border-control bg-surface py-2 pr-2 pl-3">
-              <ComposerButton label="Annuler l'enregistrement" iconPath={trashIconPath} onClick={voice.reset} />
-              <span aria-hidden="true" className="size-2.5 shrink-0 animate-pulse rounded-full bg-danger" />
+              <ComposerButton
+                label="Annuler l'enregistrement"
+                iconPath={trashIconPath}
+                onClick={voice.reset}
+              />
+              <span
+                aria-hidden="true"
+                className="size-2.5 shrink-0 animate-pulse rounded-full bg-danger"
+              />
               <p role="status" className="shrink-0 text-sm font-semibold text-ink tabular-nums">
                 <span className="sr-only">Enregistrement en cours, </span>
                 {formatTimer(voice.state.elapsed)}
@@ -514,7 +548,12 @@ export function ConversationThread({ conversation, sent, onSent }: ConversationT
                   ]}
                 />
               </div>
-              <ComposerButton label="Arrêter l'enregistrement" iconPath={stopIconPath} primary onClick={voice.stop} />
+              <ComposerButton
+                label="Arrêter l'enregistrement"
+                iconPath={stopIconPath}
+                primary
+                onClick={voice.stop}
+              />
             </div>
           ) : voice.state.status === 'recorded' ? (
             <div className="flex items-center gap-3 rounded-4xl border border-control bg-surface py-2 pr-2 pl-3">

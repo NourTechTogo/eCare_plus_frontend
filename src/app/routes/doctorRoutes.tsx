@@ -1,22 +1,27 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { AlertDetailsPage, PriorityBadge, useAlerts } from '@/features/alerts'
+import { AlertDetailsPage, SeverityBadge, useAlerts } from '@/features/alerts'
 import {
   AppointmentStatusBadge,
   isUpcoming,
   PatientAppointments,
   useAppointments,
 } from '@/features/appointments'
+import { ArticleEditorPage, ArticlePage, ArticlesPage } from '@/features/articles'
 import { useAuth } from '@/features/auth'
 import { DashboardPage, type DashboardData } from '@/features/dashboard'
+import { PatientDocuments } from '@/features/documents'
 import {
   formatMeasurementValue,
   measurementLabel,
   PatientMeasurements,
+  PatientThresholds,
   useLatestMeasurements,
 } from '@/features/measurements'
 import { useConversations } from '@/features/messaging'
+import { openConversation } from '@/features/messaging/services/messagingService'
 import { PatientNotes } from '@/features/notes'
 import {
   PatientDetailsPage,
@@ -25,11 +30,54 @@ import {
   type PatientColumn,
   type PatientTab,
 } from '@/features/patients'
+import { PatientTreatments } from '@/features/treatments'
+import { useFeedback } from '@/hooks/useFeedback'
 import { formatDateTime } from '@/utils/formatDateTime'
 
-/* Écrans du médecin qui assemblent plusieurs fonctionnalités (patients, alertes, mesures, notes). */
+/* Écrans du médecin qui assemblent plusieurs fonctionnalités (patients, alertes, mesures, notes…). */
 
 const pending = <span className="text-muted">Chargement…</span>
+
+/** « Écrire » et « Appeler » : ouvrent la conversation du patient, en la créant au besoin. */
+function ContactActions({ patientId }: { patientId: string }) {
+  const navigate = useNavigate()
+  const feedback = useFeedback()
+  const [opening, setOpening] = useState<'message' | 'appel' | null>(null)
+
+  const open = async (mode: 'message' | 'appel') => {
+    setOpening(mode)
+    try {
+      const conversation = await openConversation(patientId)
+      await navigate(`/messagerie/${conversation.id}${mode === 'appel' ? '?appel=audio' : ''}`)
+    } catch {
+      feedback.error(
+        "La conversation n'a pas pu être ouverte",
+        'Vérifiez votre connexion puis réessayez.',
+      )
+      setOpening(null)
+    }
+  }
+
+  return (
+    <>
+      <Button
+        variant="secondary"
+        loading={opening === 'message'}
+        disabled={opening !== null}
+        onClick={() => void open('message')}
+      >
+        Écrire au patient
+      </Button>
+      <Button
+        loading={opening === 'appel'}
+        disabled={opening !== null}
+        onClick={() => void open('appel')}
+      >
+        Appeler
+      </Button>
+    </>
+  )
+}
 
 export function DashboardRoute() {
   const patients = usePatients()
@@ -48,7 +96,6 @@ export function DashboardRoute() {
     appointments.status === 'success' &&
     conversations.status === 'success'
   ) {
-    const active = alerts.data.filter((alert) => !alert.resolution)
     data = {
       patientCount: patients.patients.length,
       recentMeasurements: patients.patients
@@ -69,6 +116,7 @@ export function DashboardRoute() {
         .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
       upcomingAppointments: appointments.data
         .filter((appointment) => isUpcoming(appointment, now))
+        .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))
         .map((appointment) => ({
           id: appointment.id,
           patientName: appointment.patientName,
@@ -80,17 +128,17 @@ export function DashboardRoute() {
         (total, conversation) => total + conversation.unreadCount,
         0,
       ),
-      activeAlerts: active
+      // Le service renvoie déjà les alertes triées par gravité puis par date.
+      activeAlerts: alerts.data
+        .filter((alert) => alert.status !== 'traitee')
         .map((alert) => ({
           id: alert.id,
           patientName: alert.patientName,
           trigger: alert.trigger,
           value: alert.value,
-          highPriority: alert.priority === 'haute',
-          priorityBadge: <PriorityBadge priority={alert.priority} />,
-        }))
-        // Tri stable : les alertes en haute priorité passent devant, l'ordre par date est conservé.
-        .sort((a, b) => Number(b.highPriority) - Number(a.highPriority)),
+          highPriority: alert.severity === 'critique',
+          priorityBadge: <SeverityBadge severity={alert.severity} />,
+        })),
     }
   }
 
@@ -136,11 +184,20 @@ export function DoctorPatientsRoute() {
       render: (patient) => {
         if (alerts.status !== 'success') return alerts.status === 'loading' ? pending : '—'
         const active = alerts.data.filter(
-          (alert) => alert.patientId === patient.id && !alert.resolution,
+          (alert) => alert.patientId === patient.id && alert.status !== 'traitee',
         )
         if (active.length === 0) return <Badge tone="green">Aucune alerte active</Badge>
-        const highest = active.some((alert) => alert.priority === 'haute') ? 'haute' : 'moyenne'
-        return <PriorityBadge priority={highest} />
+        const severity = active.some((alert) => alert.severity === 'critique')
+          ? 'critique'
+          : 'attention'
+        return (
+          <span className="inline-flex items-center gap-2">
+            <SeverityBadge severity={severity} />
+            {active.length > 1 && (
+              <span className="text-xs text-muted">{active.length} alertes</span>
+            )}
+          </span>
+        )
       },
     },
   ]
@@ -151,7 +208,7 @@ export function DoctorPatientsRoute() {
 /** Dossier d'un patient vu par le médecin : le suivi médical est réparti en onglets. */
 export function DoctorPatientRecordRoute() {
   const { user } = useAuth()
-  const authorName = user?.name ?? ''
+  const currentUserId = user?.id ?? ''
 
   const tabs: PatientTab[] = [
     {
@@ -168,14 +225,15 @@ export function DoctorPatientRecordRoute() {
           <>
             <PatientMeasurements patientId={patient.id} summary action={seeAll('mesures')} />
             <div className="grid items-start gap-6 xl:grid-cols-2">
+              <PatientTreatments patientId={patient.id} summary action={seeAll('traitements')} />
               <PatientAppointments patientId={patient.id} summary action={seeAll('rendez-vous')} />
-              <PatientNotes
-                patientId={patient.id}
-                authorName={authorName}
-                summary
-                action={seeAll('observations')}
-              />
             </div>
+            <PatientNotes
+              patientId={patient.id}
+              currentUserId={currentUserId}
+              summary
+              action={seeAll('notes')}
+            />
           </>
         )
       },
@@ -186,9 +244,24 @@ export function DoctorPatientRecordRoute() {
       render: (patient) => <PatientMeasurements patientId={patient.id} />,
     },
     {
-      id: 'observations',
-      label: 'Observations',
-      render: (patient) => <PatientNotes patientId={patient.id} authorName={authorName} />,
+      id: 'traitements',
+      label: 'Traitements',
+      render: (patient) => <PatientTreatments patientId={patient.id} />,
+    },
+    {
+      id: 'documents',
+      label: 'Documents',
+      render: (patient) => <PatientDocuments patientId={patient.id} />,
+    },
+    {
+      id: 'notes',
+      label: 'Notes',
+      render: (patient) => <PatientNotes patientId={patient.id} currentUserId={currentUserId} />,
+    },
+    {
+      id: 'seuils',
+      label: 'Seuils',
+      render: (patient) => <PatientThresholds patientId={patient.id} />,
     },
     {
       id: 'rendez-vous',
@@ -197,15 +270,36 @@ export function DoctorPatientRecordRoute() {
     },
   ]
 
-  return <PatientDetailsPage tabs={tabs} />
+  return (
+    <PatientDetailsPage
+      tabs={tabs}
+      // Le médecin ne voit que les patients dont il est le référent.
+      referentName={(doctorId) => (doctorId === user?.id ? `${user.name} (vous)` : undefined)}
+      renderActions={(patient) => <ContactActions patientId={patient.id} />}
+    />
+  )
 }
 
 export function AlertRoute() {
-  const { user } = useAuth()
   return (
     <AlertDetailsPage
-      currentUserName={user?.name ?? ''}
-      renderPatientContext={(patientId) => <PatientMeasurements patientId={patientId} />}
+      renderPatientContext={(patientId) => <PatientMeasurements patientId={patientId} summary />}
+      renderContactActions={(alert) => <ContactActions patientId={alert.patientId} />}
     />
   )
+}
+
+export function ArticlesRoute() {
+  const { user } = useAuth()
+  return <ArticlesPage currentUserId={user?.id ?? ''} />
+}
+
+export function ArticleRoute() {
+  const { user } = useAuth()
+  return <ArticlePage currentUserId={user?.id ?? ''} />
+}
+
+export function ArticleEditorRoute() {
+  const { user } = useAuth()
+  return <ArticleEditorPage authorName={user?.name ?? ''} />
 }

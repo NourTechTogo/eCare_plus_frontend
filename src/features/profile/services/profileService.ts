@@ -1,13 +1,15 @@
+import { mutate, query } from '@/demo/database'
+import { currentAccount } from '@/demo/session'
 import type { User } from '@/features/auth'
-import { simulateNetwork } from '@/lib/demoData'
+import {
+  defaultPreferences,
+  type NotificationPreferences,
+} from '@/features/profile/types/preferences'
 
 /*
- * DONNÉES FICTIVES — aucun appel API.
- * Le backend ne permet pas encore à un professionnel de modifier son profil : les changements
- * sont simulés et ne vivent que dans la session de l'onglet.
- *
- * Branchement futur : une route du type `PATCH /me` (cahier des charges, §5.2).
- * Le changement de mot de passe, lui, passe déjà par le backend (code reçu par e-mail).
+ * Profil de l'utilisateur connecté et préférences de notification (EF-AUTH-8). Routes attendues :
+ * GET|PATCH /me, GET|PUT /me/preferences-notifications (voir docs/CONTRAT_API.md).
+ * Le changement de mot de passe passe par le code reçu par e-mail (service d'authentification).
  */
 
 export interface ProfileChanges {
@@ -17,14 +19,45 @@ export interface ProfileChanges {
 }
 
 export async function updateProfile(user: User, changes: ProfileChanges): Promise<User> {
-  await simulateNetwork()
-  const firstName = changes.firstName.trim()
-  const lastName = changes.lastName.trim()
-  return {
-    ...user,
-    firstName,
-    lastName,
-    name: `${firstName} ${lastName}`,
-    phone: changes.phone.trim() || undefined,
-  }
+  return mutate((db) => {
+    const account = currentAccount(db)
+    account.firstName = changes.firstName.trim()
+    account.lastName = changes.lastName.trim()
+    account.phone = changes.phone.trim() || undefined
+    return {
+      ...user,
+      firstName: account.firstName,
+      lastName: account.lastName,
+      name: `${account.firstName} ${account.lastName}`,
+      phone: account.phone,
+      avatarUrl: account.avatarUrl,
+      specialty: account.specialty,
+    }
+  })
+}
+
+/** Met à jour ou supprime la photo de profil de l'utilisateur connecté (EF-W1-10). */
+export async function updateAvatar(user: User, avatarUrl: string | null): Promise<User> {
+  return mutate((db) => {
+    const account = currentAccount(db)
+    account.avatarUrl = avatarUrl ?? undefined
+    return {
+      ...user,
+      avatarUrl: account.avatarUrl,
+      specialty: account.specialty,
+    }
+  })
+}
+
+export async function getPreferences(): Promise<NotificationPreferences> {
+  return query((db) => db.preferences[currentAccount(db).id] ?? defaultPreferences)
+}
+
+export async function savePreferences(
+  preferences: NotificationPreferences,
+): Promise<NotificationPreferences> {
+  return mutate((db) => {
+    db.preferences[currentAccount(db).id] = preferences
+    return preferences
+  })
 }

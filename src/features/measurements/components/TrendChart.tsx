@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { levelLabels } from '@/features/measurements/labels'
+import type { MeasurementLevel } from '@/features/measurements/types/measurement'
 import { formatDateTime } from '@/utils/formatDateTime'
 
 export interface TrendSeries {
@@ -12,8 +14,10 @@ export interface TrendSeries {
 interface TrendChartProps {
   title: string
   series: TrendSeries[]
-  /** Seuil de la règle de suivi : tracé en pointillés, la zone au-dessus est teintée. */
-  threshold?: number
+  /** Plage normale du patient (seuils personnalisés compris), teintée sur le graphique. */
+  normalRange?: { min: number; max: number }
+  /** État d'une valeur au regard des seuils : les points hors plage prennent sa couleur. */
+  levelOf?: (value: number) => MeasurementLevel
   /** Valeur avec son unité, par exemple « 1,31 g/L ». */
   formatValue: (value: number) => string
 }
@@ -30,7 +34,8 @@ const dayFormatter = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: '
 function niceTicks(min: number, max: number) {
   const rawStep = (max - min || 1) / 4
   const magnitude = 10 ** Math.floor(Math.log10(rawStep))
-  const step = [1, 2, 5, 10].map((factor) => factor * magnitude).find((s) => s >= rawStep) ?? rawStep
+  const step =
+    [1, 2, 5, 10].map((factor) => factor * magnitude).find((s) => s >= rawStep) ?? rawStep
   const ticks: number[] = []
   // La dernière graduation est la première à atteindre le maximum : aucune valeur ne dépasse l'axe.
   for (let tick = Math.floor(min / step) * step; ; tick += step) {
@@ -69,7 +74,13 @@ function summarize(points: TrendSeries['points']) {
  * Courbe d'évolution d'une mesure dans le temps.
  * Les valeurs exactes restent disponibles au survol et dans le tableau d'historique.
  */
-export function TrendChart({ title, series, threshold, formatValue }: TrendChartProps) {
+const levelColors: Record<MeasurementLevel, string | null> = {
+  normal: null,
+  attention: 'var(--color-warning)',
+  critique: 'var(--color-danger)',
+}
+
+export function TrendChart({ title, series, normalRange, levelOf, formatValue }: TrendChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [hoveredTime, setHoveredTime] = useState<number | null>(null)
@@ -95,7 +106,7 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
     (a, b) => a - b,
   )
   const values = series.flatMap((s) => s.points.map((point) => point.value))
-  if (threshold !== undefined) values.push(threshold)
+  if (normalRange) values.push(normalRange.min, normalRange.max)
   const yTicks = niceTicks(Math.min(...values), Math.max(...values))
   const [yMin, yMax] = [yTicks[0], yTicks[yTicks.length - 1]]
   const [tMin, tMax] = [times[0], times[times.length - 1]]
@@ -103,9 +114,10 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
   const x = (time: number) =>
     MARGIN.left + (tMax === tMin ? plotWidth / 2 : ((time - tMin) / (tMax - tMin)) * plotWidth)
   const y = (value: number) => MARGIN.top + (1 - (value - yMin) / (yMax - yMin)) * plotHeight
-  const isAbove = (value: number) => threshold !== undefined && value > threshold
+  const level = (value: number): MeasurementLevel => levelOf?.(value) ?? 'normal'
   const unitless = (value: number) => formatValue(value).replace(/\s\D+$/, '')
-  const signed = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatValue(Math.abs(value))}`
+  const signed = (value: number) =>
+    `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatValue(Math.abs(value))}`
 
   // Étiquettes en bout de courbe, écartées quand deux séries se terminent trop près l'une de l'autre.
   const endLabels = series
@@ -182,14 +194,13 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
             aria-label={`${title} : courbe d'évolution. Les valeurs exactes figurent dans l'historique des mesures.`}
             className="block text-xs"
           >
-            {threshold !== undefined && (
+            {normalRange && (
               <rect
                 x={MARGIN.left}
-                y={MARGIN.top}
+                y={y(normalRange.max)}
                 width={plotWidth}
-                height={y(threshold) - MARGIN.top}
-                fill="var(--color-danger-soft)"
-                opacity="0.6"
+                height={y(normalRange.min) - y(normalRange.max)}
+                fill="var(--color-success-soft)"
               />
             )}
 
@@ -226,17 +237,19 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
               </text>
             ))}
 
-            {threshold !== undefined && (
-              <line
-                x1={MARGIN.left}
-                x2={MARGIN.left + plotWidth}
-                y1={y(threshold)}
-                y2={y(threshold)}
-                stroke="var(--color-danger)"
-                strokeWidth="1.5"
-                strokeDasharray="6 4"
-              />
-            )}
+            {normalRange &&
+              [normalRange.min, normalRange.max].map((bound) => (
+                <line
+                  key={bound}
+                  x1={MARGIN.left}
+                  x2={MARGIN.left + plotWidth}
+                  y1={y(bound)}
+                  y2={y(bound)}
+                  stroke="var(--color-success)"
+                  strokeWidth="1.5"
+                  strokeDasharray="6 4"
+                />
+              ))}
 
             {hoveredTime !== null && (
               <line
@@ -276,7 +289,7 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
                       cx={x(point.time)}
                       cy={y(point.value)}
                       r={point.time === hoveredTime ? 7 : 4.5}
-                      fill={isAbove(point.value) ? 'var(--color-danger)' : s.color}
+                      fill={levelColors[level(point.value)] ?? s.color}
                       stroke="var(--color-surface)"
                       strokeWidth="2"
                     />
@@ -285,18 +298,18 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
               )
             })}
 
-            {/* Libellé du seuil tracé après les courbes, sur un liseré, pour rester lisible. */}
-            {threshold !== undefined && (
+            {/* Libellé de la plage tracé après les courbes, sur un liseré, pour rester lisible. */}
+            {normalRange && (
               <text
                 x={MARGIN.left + 6}
-                y={y(threshold) - 7}
-                fill="var(--color-danger)"
+                y={y(normalRange.max) - 7}
+                fill="var(--color-success)"
                 fontWeight="600"
                 stroke="var(--color-surface)"
                 strokeWidth="4"
                 paintOrder="stroke"
               >
-                Seuil d'alerte : {formatValue(threshold)}
+                Plage normale : {unitless(normalRange.min)} à {formatValue(normalRange.max)}
               </text>
             )}
 
@@ -348,8 +361,12 @@ export function TrendChart({ title, series, threshold, formatValue }: TrendChart
                   {multiple && <span className="text-muted">{item.label} :</span>}
                   <span className="text-sm font-semibold">{formatValue(item.value)}</span>
                 </span>
-                {isAbove(item.value) && (
-                  <span className="font-semibold text-danger">Au-dessus du seuil d'alerte</span>
+                {level(item.value) !== 'normal' && (
+                  <span
+                    className={`font-semibold ${level(item.value) === 'critique' ? 'text-danger' : 'text-warning'}`}
+                  >
+                    {levelLabels[level(item.value)]} : hors de la plage normale
+                  </span>
                 )}
               </p>
             ))}

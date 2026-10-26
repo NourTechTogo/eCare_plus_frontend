@@ -1,225 +1,270 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Page } from '@/components/layouts/Page'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { IconLink, recordIconPath } from '@/components/ui/IconLink'
-import { SelectField } from '@/components/ui/SelectField'
 import { PageSkeleton } from '@/components/ui/Skeleton'
 import { StatTile } from '@/components/ui/StatTile'
-import { AppointmentStatusBadge } from '@/features/appointments/components/AppointmentStatusBadge'
-import { useAppointments } from '@/features/appointments/hooks/useAppointments'
+import { Tabs } from '@/components/ui/Tabs'
+import { tabId, tabPanelId } from '@/components/ui/tabIds'
 import {
-  actionLabels,
-  availableActions,
-  isUpcoming,
-  statusLabels,
-} from '@/features/appointments/labels'
-import { applyAppointmentAction } from '@/features/appointments/services/appointmentService'
-import type { Appointment, AppointmentAction } from '@/features/appointments/types/appointment'
-import { useFeedback } from '@/hooks/useFeedback'
-import { formatDateTime } from '@/utils/formatDateTime'
+  AddAvailabilityDialog,
+  DeleteAvailabilityDialog,
+} from '@/features/appointments/components/AppointmentDialogs'
+import { AppointmentItem } from '@/features/appointments/components/AppointmentItem'
+import { AvailabilityList } from '@/features/appointments/components/AvailabilityList'
+import { useAppointments, useAvailabilities } from '@/features/appointments/hooks/useAppointments'
+import { awaitsAnswer, awaitsOutcome, isUpcoming } from '@/features/appointments/labels'
+import { slotsOf } from '@/features/appointments/slots'
+import type { Appointment, Availability } from '@/features/appointments/types/appointment'
+import { dayKey, formatDayHeading } from '@/utils/localDate'
 
-const pageDescription = 'Consultations planifiées avec les patients suivis'
+const pageDescription = 'Vos disponibilités et les rendez-vous réservés par vos patients'
+const WEEK_MS = 7 * 86_400_000
 
-const headClassName =
-  'bg-page px-4 py-3 text-left text-xs font-semibold tracking-wide text-muted uppercase first:rounded-l-lg last:rounded-r-lg'
-const cellClassName =
-  'border-y border-line px-4 py-3 first:rounded-l-lg first:border-l last:rounded-r-lg last:border-r'
+const count = (total: number, one: string, many: string) => `${total} ${total === 1 ? one : many}`
 
-const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }))
-
-const successTitles: Record<AppointmentAction, string> = {
-  confirmer: 'Rendez-vous confirmé',
-  annuler: 'Rendez-vous annulé',
-  realiser: 'Rendez-vous marqué comme réalisé',
-}
-
-const count = (total: number) => (total === 1 ? '1 rendez-vous' : `${total} rendez-vous`)
-
-interface AppointmentsTableProps {
+function DayGroups({
+  appointments,
+  now,
+  onChange,
+}: {
   appointments: Appointment[]
-  /** Identifiant du rendez-vous dont une action est en cours d'enregistrement. */
-  pendingId?: string
-  onAction?: (appointment: Appointment, action: AppointmentAction) => void
-}
-
-function AppointmentsTable({ appointments, pendingId, onAction }: AppointmentsTableProps) {
+  now: number
+  onChange: (appointment: Appointment) => void
+}) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-208 border-separate border-spacing-y-2 text-sm">
-        <thead>
-          <tr>
-            <th scope="col" className={headClassName}>
-              Date et heure
-            </th>
-            <th scope="col" className={headClassName}>
-              Patient
-            </th>
-            <th scope="col" className={headClassName}>
-              Motif
-            </th>
-            <th scope="col" className={headClassName}>
-              Statut
-            </th>
-            {onAction && (
-              <th scope="col" className={headClassName}>
-                Actions
-              </th>
+    <div className="flex flex-col gap-6">
+      {appointments.map((appointment, index) => {
+        const newDay =
+          index === 0 ||
+          dayKey(appointments[index - 1].scheduledAt) !== dayKey(appointment.scheduledAt)
+        return (
+          <Fragment key={appointment.id}>
+            {newDay && (
+              <h3 className="-mb-3 font-display text-sm font-bold tracking-wide text-muted uppercase">
+                {formatDayHeading(appointment.scheduledAt)}
+              </h3>
             )}
-          </tr>
-        </thead>
-        <tbody>
-          {appointments.map((appointment) => (
-            <tr key={appointment.id}>
-              <td className={`${cellClassName} font-semibold whitespace-nowrap text-ink`}>
-                {formatDateTime(appointment.scheduledAt)}
-              </td>
-              <td className={cellClassName}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-ink">{appointment.patientName}</p>
-                    <p className="text-xs text-muted">N° {appointment.patientFileNumber}</p>
-                  </div>
-                  <IconLink
-                    to={`/patients/${appointment.patientId}`}
-                    label={`Consulter le dossier de ${appointment.patientName}`}
-                    iconPath={recordIconPath}
-                  />
-                </div>
-              </td>
-              <td className={cellClassName}>
-                <p>{appointment.reason}</p>
-                {appointment.location && (
-                  <p className="text-xs text-muted">{appointment.location}</p>
-                )}
-              </td>
-              <td className={cellClassName}>
-                <AppointmentStatusBadge status={appointment.status} />
-              </td>
-              {onAction && (
-                <td className={cellClassName}>
-                  <div className="flex flex-wrap gap-2">
-                    {availableActions(appointment.status).map((action) => (
-                      <Button
-                        key={action}
-                        size="sm"
-                        variant={action === 'annuler' ? 'secondary' : 'primary'}
-                        disabled={pendingId !== undefined}
-                        loading={pendingId === appointment.id}
-                        aria-label={`${actionLabels[action]} le rendez-vous de ${appointment.patientName}`}
-                        onClick={() => onAction(appointment, action)}
-                      >
-                        {actionLabels[action]}
-                      </Button>
-                    ))}
-                  </div>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            <ul>
+              <AppointmentItem
+                appointment={appointment}
+                now={now}
+                showPatient
+                onChange={onChange}
+              />
+            </ul>
+          </Fragment>
+        )
+      })}
     </div>
   )
 }
 
-export function AppointmentsPage() {
-  const state = useAppointments()
-  const feedback = useFeedback()
-  // Rendez-vous dont le statut a changé depuis l'ouverture de l'écran, par identifiant.
-  const [changed, setChanged] = useState<Record<string, Appointment>>({})
-  const [pendingId, setPendingId] = useState<string>()
-  const [status, setStatus] = useState('')
-  const [now] = useState(() => Date.now())
+const empty = (text: string) => <p className="py-8 text-center text-sm text-muted">{text}</p>
 
-  if (state.status !== 'success') {
+/** Agenda du médecin : demandes à traiter, rendez-vous confirmés, disponibilités et historique. */
+export function AppointmentsPage() {
+  const appointmentsState = useAppointments()
+  const availabilitiesState = useAvailabilities()
+  const [now] = useState(() => Date.now())
+  // Changements faits depuis l'ouverture de l'écran.
+  const [changed, setChanged] = useState<Record<string, Appointment>>({})
+  const [addedAvailabilities, setAddedAvailabilities] = useState<Availability[]>([])
+  const [deletedIds, setDeletedIds] = useState<string[]>([])
+  const [adding, setAdding] = useState(false)
+  const [deleting, setDeleting] = useState<Availability>()
+  const [active, setActive] = useState('demandes')
+  const remember = (appointment: Appointment) =>
+    setChanged((current) => ({ ...current, [appointment.id]: appointment }))
+
+  const action = <Button onClick={() => setAdding(true)}>Ajouter une disponibilité</Button>
+
+  if (appointmentsState.status !== 'success' || availabilitiesState.status !== 'success') {
+    const failed = appointmentsState.status === 'error' || availabilitiesState.status === 'error'
     return (
       <Page title="Rendez-vous" description={pageDescription}>
-        {state.status === 'loading' ? (
-          <PageSkeleton label="Chargement des rendez-vous…" />
-        ) : (
+        {failed ? (
           <Alert variant="error" title="Les rendez-vous n'ont pas pu être chargés.">
             Rechargez la page pour réessayer.
           </Alert>
+        ) : (
+          <PageSkeleton label="Chargement des rendez-vous…" />
         )}
       </Page>
     )
   }
 
-  const handleAction = async (appointment: Appointment, action: AppointmentAction) => {
-    setPendingId(appointment.id)
-    try {
-      const updated = await applyAppointmentAction(appointment.id, action)
-      setChanged((current) => ({ ...current, [updated.id]: updated }))
-      feedback.success(
-        successTitles[action],
-        `${updated.patientName}, ${formatDateTime(updated.scheduledAt)}.`,
-      )
-    } catch {
-      feedback.error(
-        "Le rendez-vous n'a pas pu être mis à jour",
-        'Vérifiez votre connexion puis réessayez.',
-      )
-    } finally {
-      setPendingId(undefined)
-    }
-  }
+  const all = appointmentsState.data
+    .map((appointment) => changed[appointment.id] ?? appointment)
+    .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))
+  const availabilities = [...availabilitiesState.data, ...addedAvailabilities]
+    .filter((availability) => !deletedIds.includes(availability.id))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
 
-  const all = state.data.map((appointment) => changed[appointment.id] ?? appointment)
-  const upcomingAll = all.filter((appointment) => isUpcoming(appointment, now))
-  const shown = status ? all.filter((appointment) => appointment.status === status) : all
-  const upcoming = shown.filter((appointment) => isUpcoming(appointment, now))
-  // Rendez-vous passés, annulés ou réalisés, du plus récent au plus ancien.
-  const past = shown.filter((appointment) => !isUpcoming(appointment, now)).reverse()
+  const requests = all.filter((appointment) => awaitsAnswer(appointment, now))
+  const toClose = all.filter((appointment) => awaitsOutcome(appointment, now))
+  const agenda = all.filter(
+    (appointment) =>
+      appointment.status === 'confirme' &&
+      isUpcoming(appointment, now) &&
+      !awaitsOutcome(appointment, now),
+  )
+  const history = all
+    .filter(
+      (appointment) =>
+        !awaitsAnswer(appointment, now) &&
+        !awaitsOutcome(appointment, now) &&
+        !(appointment.status === 'confirme' && isUpcoming(appointment, now)),
+    )
+    .reverse()
+  const today = agenda.filter(
+    (appointment) => dayKey(appointment.scheduledAt) === dayKey(new Date(now).toISOString()),
+  )
+  const freeThisWeek = availabilities
+    .filter((availability) => new Date(availability.startsAt).getTime() - now <= WEEK_MS)
+    .flatMap((availability) => slotsOf(availability, all))
+    .filter((slot) => !slot.appointment && new Date(slot.start).getTime() > now).length
+
+  const tabs = [
+    { id: 'demandes', label: `Demandes${requests.length ? ` (${requests.length})` : ''}` },
+    { id: 'agenda', label: 'Agenda' },
+    { id: 'disponibilites', label: 'Mes disponibilités' },
+    { id: 'historique', label: 'Historique' },
+  ]
 
   return (
-    <Page title="Rendez-vous" description={pageDescription}>
+    <Page title="Rendez-vous" description={pageDescription} action={action}>
       <div className="grid gap-4 md:grid-cols-3">
-        <StatTile label="À venir" value={count(upcomingAll.length)} hint="Planifiés ou confirmés" />
         <StatTile
           tone="amber"
-          label="À confirmer"
-          value={count(upcomingAll.filter(({ status }) => status !== 'confirme').length)}
-          hint="Planifiés ou reportés"
+          label="Demandes à confirmer"
+          value={count(requests.length, 'demande', 'demandes')}
+          hint="Réservées par vos patients"
+        />
+        <StatTile
+          label="Aujourd'hui"
+          value={count(today.length, 'rendez-vous', 'rendez-vous')}
+          hint="Rendez-vous confirmés"
         />
         <StatTile
           tone="green"
-          label="Réalisés"
-          value={count(all.filter(({ status }) => status === 'realise').length)}
-          hint="Consultations effectuées"
+          label="Créneaux libres"
+          value={count(freeThisWeek, 'créneau', 'créneaux')}
+          hint="Dans les 7 prochains jours"
         />
       </div>
 
-      <div className="max-w-xs">
-        <SelectField
-          label="Statut"
-          placeholder="Tous les statuts"
-          options={statusOptions}
-          showRequirement={false}
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-        />
-      </div>
-
-      <Card title="Rendez-vous à venir">
-        {upcoming.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted">
-            {status ? 'Aucun rendez-vous à venir avec ce statut.' : 'Aucun rendez-vous à venir.'}
-          </p>
-        ) : (
-          <AppointmentsTable
-            appointments={upcoming}
-            pendingId={pendingId}
-            onAction={(appointment, action) => void handleAction(appointment, action)}
-          />
+      <Tabs label="Rendez-vous" tabs={tabs} active={active} onChange={setActive} />
+      <div
+        key={active}
+        id={tabPanelId(active)}
+        role="tabpanel"
+        aria-labelledby={tabId(active)}
+        className="flex animate-enter flex-col gap-6"
+      >
+        {active === 'demandes' && (
+          <Card title="Demandes à confirmer">
+            {requests.length === 0 ? (
+              empty('Aucune demande en attente.')
+            ) : (
+              <>
+                <p className="mb-4 text-sm text-muted">
+                  Ces créneaux ont été réservés par vos patients dans l'application. Confirmez-les,
+                  ou refusez-les en indiquant un motif.
+                </p>
+                <DayGroups appointments={requests} now={now} onChange={remember} />
+              </>
+            )}
+          </Card>
         )}
-      </Card>
 
-      {past.length > 0 && (
-        <Card title="Rendez-vous passés ou annulés">
-          <AppointmentsTable appointments={past} />
-        </Card>
+        {active === 'agenda' && (
+          <>
+            {toClose.length > 0 && (
+              <Card title="À clôturer">
+                <p className="mb-4 text-sm text-muted">
+                  Ces rendez-vous sont passés : indiquez s'ils ont eu lieu.
+                </p>
+                <ul className="flex flex-col gap-3">
+                  {toClose.map((appointment) => (
+                    <AppointmentItem
+                      key={appointment.id}
+                      appointment={appointment}
+                      now={now}
+                      showPatient
+                      onChange={remember}
+                    />
+                  ))}
+                </ul>
+              </Card>
+            )}
+            <Card title="Rendez-vous confirmés">
+              {agenda.length === 0 ? (
+                empty('Aucun rendez-vous confirmé à venir.')
+              ) : (
+                <DayGroups appointments={agenda} now={now} onChange={remember} />
+              )}
+            </Card>
+          </>
+        )}
+
+        {active === 'disponibilites' && (
+          <Card title="Mes disponibilités" action={action}>
+            {availabilities.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-8 text-center">
+                <p className="text-sm text-muted">
+                  Aucune disponibilité publiée : vos patients ne peuvent pas réserver de
+                  rendez-vous.
+                </p>
+                {action}
+              </div>
+            ) : (
+              <AvailabilityList
+                availabilities={availabilities}
+                appointments={all}
+                onDelete={setDeleting}
+              />
+            )}
+          </Card>
+        )}
+
+        {active === 'historique' && (
+          <Card title="Historique">
+            {history.length === 0 ? (
+              empty('Aucun rendez-vous passé.')
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {history.map((appointment) => (
+                  <AppointmentItem
+                    key={appointment.id}
+                    appointment={appointment}
+                    now={now}
+                    showPatient
+                    onChange={remember}
+                  />
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
+      </div>
+
+      {adding && (
+        <AddAvailabilityDialog
+          onClose={() => setAdding(false)}
+          onCreated={(created) => {
+            setAddedAvailabilities((current) => [...current, ...created])
+            setActive('disponibilites')
+          }}
+        />
+      )}
+      {deleting && (
+        <DeleteAvailabilityDialog
+          availability={deleting}
+          onClose={() => setDeleting(undefined)}
+          onDeleted={(id) => setDeletedIds((current) => [...current, id])}
+        />
       )}
     </Page>
   )

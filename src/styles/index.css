@@ -77,6 +77,15 @@
   }
 }
 
+/*
+ * Edge et Internet Explorer ajoutent leur propre bouton « afficher le mot de passe » : il ferait
+ * doublon avec celui du champ mot de passe de l'application.
+ */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 /* Dans la couche « components » pour que les utilitaires (arrondis, etc.) gardent la priorité. */
 @layer components {
   /* Apparition en cascade des blocs d'un écran. */

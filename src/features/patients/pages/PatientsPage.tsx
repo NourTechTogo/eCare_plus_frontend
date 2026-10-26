@@ -14,7 +14,7 @@ import type { Patient } from '@/features/patients/types/patient'
 import { formatDate } from '@/utils/formatDate'
 import { getAge } from '@/utils/getAge'
 
-const pageDescription = 'Dossiers des patients suivis par la structure'
+const pageDescription = 'Dossiers des patients suivis par l’établissement'
 
 const headClassName =
   'bg-page px-4 py-3 text-left text-xs font-semibold tracking-wide text-muted uppercase first:rounded-l-lg last:rounded-r-lg'
@@ -115,7 +115,7 @@ function countLabel(shown: number, total: number) {
 }
 
 interface PatientsPageProps {
-  /** Autorise l'ajout et la modification de dossiers (gestionnaire). */
+  /** Autorise l'ajout et la modification de dossiers (personnel de l'établissement). */
   canManage: boolean
   /** Colonnes fournies par l'application à la place des colonnes administratives (suivi médical). */
   columns?: PatientColumn[]
@@ -144,14 +144,21 @@ export function PatientsPage({ canManage, columns = administrativeColumns }: Pat
 
       <Card
         title={
-          state.status === 'success' ? countLabel(shownPatients.length, patients.length) : 'Patients'
+          state.status === 'success'
+            ? countLabel(shownPatients.length, patients.length)
+            : 'Patients'
         }
         action={
           canManage && (
-            <Link to="/patients/nouveau" className={buttonClassName('soft')}>
-              <span aria-hidden="true">+</span>
-              Ajouter un patient
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/patients/referencer" className={buttonClassName('secondary')}>
+                Référencer par code QR
+              </Link>
+              <Link to="/patients/nouveau" className={buttonClassName('primary')}>
+                <span aria-hidden="true">+</span>
+                Ajouter un patient
+              </Link>
+            </div>
           )
         }
       >
@@ -171,7 +178,9 @@ export function PatientsPage({ canManage, columns = administrativeColumns }: Pat
             </Button>
           </div>
         )}
-        {shownPatients.length > 0 && <PatientsTable patients={shownPatients} columns={columns} canManage={canManage} />}
+        {shownPatients.length > 0 && (
+          <PatientsTable patients={shownPatients} columns={columns} canManage={canManage} />
+        )}
       </Card>
     </Page>
   )

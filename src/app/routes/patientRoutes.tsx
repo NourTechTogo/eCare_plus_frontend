@@ -1,20 +1,22 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router'
 import { DoctorPatientRecordRoute, DoctorPatientsRoute } from '@/app/routes/doctorRoutes'
+import { StaffPatientRecordRoute, StaffPatientsRoute } from '@/app/routes/staffRoutes'
 import { useAuth, type UserRole } from '@/features/auth'
 import { LandingPage } from '@/features/landing'
-import { PatientDetailsPage, PatientsPage } from '@/features/patients'
 
 /*
  * Répartition des écrans selon le rôle :
- * - gestionnaire : gestion administrative des dossiers (ajout, modification) ;
- * - médecin : tableau de bord, alertes, consultation des dossiers, mesures et observations.
+ * - administrateur : comptes des médecins et du personnel ;
+ * - personnel de l'établissement : dossiers patients et affectation du médecin référent ;
+ * - médecin : tableau de bord, dossiers de ses patients, alertes, messagerie, rendez-vous, articles.
  * Simple confort de navigation : le contrôle d'accès réel relève du backend.
  */
 
 /** Page d'accueil de chaque rôle après la connexion. */
 const homePaths: Record<UserRole, string> = {
-  gestionnaire: '/patients',
+  admin: '/medecins',
+  personnel: '/patients',
   medecin: '/tableau-de-bord',
 }
 
@@ -37,10 +39,12 @@ export function RoleOnly({ role, children }: { role: UserRole; children: ReactNo
 
 export function PatientsRoute() {
   const { user } = useAuth()
-  return user?.role === 'medecin' ? <DoctorPatientsRoute /> : <PatientsPage canManage />
+  if (user?.role === 'medecin') return <DoctorPatientsRoute />
+  return user?.role === 'personnel' ? <StaffPatientsRoute /> : <HomeRedirect />
 }
 
 export function PatientRecordRoute() {
   const { user } = useAuth()
-  return user?.role === 'medecin' ? <DoctorPatientRecordRoute /> : <PatientDetailsPage />
+  if (user?.role === 'medecin') return <DoctorPatientRecordRoute />
+  return user?.role === 'personnel' ? <StaffPatientRecordRoute /> : <HomeRedirect />
 }

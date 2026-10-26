@@ -1,115 +1,122 @@
 import { Card } from '@/components/ui/Card'
 import { TrendChart, type TrendSeries } from '@/features/measurements/components/TrendChart'
-import type { Measurement } from '@/features/measurements/types/measurement'
-
-/*
- * Seuils d'alerte repris de l'écran « Configuration des règles de suivi » de la maquette.
- * Provisoires : ils restent à valider médicalement et viendront du backend.
- */
-const GLYCEMIA_THRESHOLD = 1.6
-const SYSTOLIC_THRESHOLD = 140
-const DIASTOLIC_THRESHOLD = 90
+import { formatMetricValue } from '@/features/measurements/labels'
+import {
+  levelOf,
+  metricLabels,
+  metricUnits,
+  type ThresholdSet,
+} from '@/features/measurements/thresholds'
+import type { Measurement, ThresholdMetric } from '@/features/measurements/types/measurement'
 
 const BLUE = 'var(--color-primary)'
-const VIOLET = 'var(--color-violet)'
-
-const decimal = (digits: number) =>
-  new Intl.NumberFormat('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits })
-const twoDecimals = decimal(2)
-const oneDecimal = decimal(1)
 
 const time = (measurement: Measurement) => new Date(measurement.recordedAt).getTime()
 
-/** Construit une série à partir des mesures retenues, triées par date croissante. */
-function toSeries<M extends Measurement>(
-  label: string,
-  color: string,
-  measurements: M[],
-  value: (measurement: M) => number,
-): TrendSeries {
-  return {
-    label,
-    color,
-    points: measurements
-      .map((measurement) => ({ time: time(measurement), value: value(measurement) }))
-      .sort((a, b) => a.time - b.time),
-  }
+interface ChartDefinition {
+  title: string
+  metric?: ThresholdMetric
+  unit: string
+  points: { time: number; value: number }[]
 }
 
-/**
- * Une évolution n'a de sens qu'à partir de deux mesures : en dessous, le graphique n'est pas affiché.
- * Au-delà, toutes les séries non vides sont gardées, même réduites à un point isolé.
- */
-function drawable(series: TrendSeries[]) {
-  const nonEmpty = series.filter((s) => s.points.length > 0)
-  const dates = new Set(nonEmpty.flatMap((s) => s.points.map((point) => point.time)))
-  return dates.size >= 2 ? nonEmpty : []
+/** Valeurs d'une grandeur, par ordre chronologique. */
+function points<M extends Measurement>(measurements: M[], value: (measurement: M) => number) {
+  return measurements
+    .map((measurement) => ({ time: time(measurement), value: value(measurement) }))
+    .sort((a, b) => a.time - b.time)
 }
 
-/**
- * Courbes d'évolution des mesures d'un patient.
- * Un graphique par grandeur et par seuil : jamais deux échelles ni deux seuils sur le même tracé.
- */
-export function MeasurementTrends({ measurements }: { measurements: Measurement[] }) {
-  const glycemia = measurements.filter((m) => m.kind === 'glycemie')
-  const pressure = measurements.filter((m) => m.kind === 'tension')
-  const weight = measurements.filter((m) => m.kind === 'poids')
-  const heartRate = measurements.filter((m) => m.kind === 'frequence_cardiaque')
-  const mmHg = (value: number) => `${value} mmHg`
-
-  const charts = [
-    {
-      title: 'Glycémie',
-      series: drawable([
-        toSeries('À jeun', BLUE, glycemia.filter((m) => m.context === 'a_jeun'), (m) => m.value),
-        toSeries(
-          'Post-prandiale',
-          VIOLET,
+function charts(measurements: Measurement[]): ChartDefinition[] {
+  const of = <K extends Measurement['kind']>(kind: K) =>
+    measurements.filter((m): m is Extract<Measurement, { kind: K }> => m.kind === kind)
+  const glycemia = of('glycemie')
+  const pressure = of('tension')
+  const metric = (key: ThresholdMetric, values: ChartDefinition['points']): ChartDefinition => ({
+    title: metricLabels[key],
+    metric: key,
+    unit: metricUnits[key],
+    points: values,
+  })
+  return (
+    [
+      metric(
+        'glycemie_a_jeun',
+        points(
+          glycemia.filter((m) => m.context === 'a_jeun'),
+          (m) => m.value,
+        ),
+      ),
+      metric(
+        'glycemie_post_prandiale',
+        points(
           glycemia.filter((m) => m.context === 'post_prandiale'),
           (m) => m.value,
         ),
-      ]),
-      threshold: GLYCEMIA_THRESHOLD,
-      formatValue: (value: number) => `${twoDecimals.format(value)} g/L`,
-    },
-    {
-      title: 'Tension artérielle systolique',
-      series: drawable([toSeries('Systolique', BLUE, pressure, (m) => m.systolic)]),
-      threshold: SYSTOLIC_THRESHOLD,
-      formatValue: mmHg,
-    },
-    {
-      title: 'Tension artérielle diastolique',
-      series: drawable([toSeries('Diastolique', VIOLET, pressure, (m) => m.diastolic)]),
-      threshold: DIASTOLIC_THRESHOLD,
-      formatValue: mmHg,
-    },
-    {
-      title: 'Poids',
-      series: drawable([toSeries('Poids', BLUE, weight, (m) => m.value)]),
-      formatValue: (value: number) => `${oneDecimal.format(value)} kg`,
-    },
-    {
-      title: 'Fréquence cardiaque',
-      series: drawable([toSeries('Fréquence cardiaque', BLUE, heartRate, (m) => m.value)]),
-      formatValue: (value: number) => `${value} bpm`,
-    },
-  ].filter((chart) => chart.series.length > 0)
+      ),
+      metric(
+        'systolique',
+        points(pressure, (m) => m.systolic),
+      ),
+      metric(
+        'diastolique',
+        points(pressure, (m) => m.diastolic),
+      ),
+      metric(
+        'frequence_cardiaque',
+        points(of('frequence_cardiaque'), (m) => m.value),
+      ),
+      { title: 'Poids', unit: 'kg', points: points(of('poids'), (m) => m.value) },
+    ]
+      // Une évolution n'a de sens qu'à partir de deux mesures.
+      .filter((chart) => chart.points.length >= 2)
+  )
+}
 
-  if (charts.length === 0) return null
+interface MeasurementTrendsProps {
+  measurements: Measurement[]
+  thresholds: ThresholdSet
+}
+
+/**
+ * Courbes d'évolution (EF-W2-5) : une par grandeur, avec la plage normale du patient. Jamais deux
+ * échelles ni deux plages sur le même tracé.
+ */
+export function MeasurementTrends({ measurements, thresholds }: MeasurementTrendsProps) {
+  const definitions = charts(measurements)
 
   return (
     <Card title="Évolution des mesures">
-      <div className="flex flex-col gap-10">
-        {charts.map((chart) => (
-          <TrendChart key={chart.title} {...chart} />
-        ))}
-        <p className="text-xs text-muted">
-          La zone teintée et les points rouges signalent les valeurs au-dessus du seuil d'alerte.
-          Ces courbes montrent la tendance des mesures transmises ; elles ne constituent pas une
-          interprétation médicale.
+      {definitions.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted">
+          Pas assez de mesures sur cette période pour tracer une évolution.
         </p>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-10">
+          {definitions.map((chart) => {
+            const rule = chart.metric ? thresholds[chart.metric] : undefined
+            const series: TrendSeries[] = [
+              { label: chart.title, color: BLUE, points: chart.points },
+            ]
+            return (
+              <TrendChart
+                key={chart.title}
+                title={chart.title}
+                series={series}
+                normalRange={rule ? { min: rule.normalMin, max: rule.normalMax } : undefined}
+                levelOf={rule ? (value) => levelOf(value, rule) : undefined}
+                formatValue={(value) => formatMetricValue(value, chart.unit)}
+              />
+            )
+          })}
+          <p className="text-xs text-muted">
+            La bande verte correspond à la plage normale du patient ; les points orange et rouges
+            sont hors de cette plage. Les courbes montrent la tendance des mesures transmises et ne
+            constituent pas une interprétation médicale. Les mesures de la montre connectée sont des
+            indications, non des mesures certifiées.
+          </p>
+        </div>
+      )}
     </Card>
   )
 }

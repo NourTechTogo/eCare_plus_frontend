@@ -18,7 +18,8 @@ const container = 'mx-auto w-full max-w-7xl px-4 sm:px-8 lg:px-12'
 /** Bande pleine largeur : chaque section occupe toute la largeur de l'écran. */
 const band = 'py-20 sm:py-28'
 const panel = 'rounded-3xl bg-surface shadow-lg shadow-primary/10'
-const sectionTitle = 'font-display text-3xl leading-tight font-bold text-ink sm:text-4xl sm:leading-tight'
+const sectionTitle =
+  'font-display text-3xl leading-tight font-bold text-ink sm:text-4xl sm:leading-tight'
 const sectionIntro = 'mt-4 text-lg leading-relaxed text-muted'
 const eyebrow = 'text-sm font-bold tracking-widest text-primary-strong uppercase'
 /** Décalage d'ancre : la barre de navigation reste affichée en haut de l'écran. */
@@ -37,8 +38,7 @@ const icons = {
   heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.600A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z',
   bell: 'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15L6 16ZM10 20.500a2 2 0 0 0 4 0',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z',
-  folder:
-    'M3 6a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z',
+  folder: 'M3 6a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z',
   cross: 'M9.5 3.500h5v6h6v5h-6v6h-5v-6h-6v-5h6v-6Z',
   check: 'm5 12 5 5 9-10',
   arrow: 'M5 12h14M13 6l6 6-6 6',
@@ -102,7 +102,7 @@ const measures: { icon: IconName; name: string; detail: string }[] = [
 const steps = [
   {
     title: 'Le dossier est créé',
-    text: 'Le gestionnaire enregistre le patient et ses informations administratives.',
+    text: "Le personnel de l'établissement enregistre le patient et lui affecte un médecin référent.",
   },
   {
     title: 'Les mesures arrivent',
@@ -143,14 +143,25 @@ const portalFeatures: { title: string; text: string; preview: ReactNode }[] = [
 
 const roles: { icon: IconName; name: string; summary: string; home: string; tasks: string[] }[] = [
   {
+    icon: 'lock',
+    name: 'Administrateur',
+    summary: 'Gère les accès au portail.',
+    home: 'Médecins',
+    tasks: [
+      'Créer les comptes des médecins',
+      'Créer les comptes du personnel',
+      'Désactiver un compte qui ne doit plus servir',
+    ],
+  },
+  {
     icon: 'folder',
-    name: 'Gestionnaire',
+    name: "Personnel de l'établissement",
     summary: 'Tient à jour les dossiers des patients.',
     home: 'Liste des patients',
     tasks: [
-      'Créer un dossier patient',
-      'Modifier les informations du patient',
-      'Consulter les informations administratives',
+      'Créer un dossier patient et affecter son médecin référent',
+      'Référencer un patient inscrit depuis l’application',
+      'Modifier les informations administratives',
     ],
   },
   {
@@ -200,7 +211,7 @@ const questions = [
   {
     question: 'Tout le monde voit-il les mêmes écrans ?',
     answer:
-      'Non. Le gestionnaire gère les informations administratives des dossiers. Le médecin consulte les dossiers, les mesures et les alertes pour assurer le suivi médical.',
+      "Non. L'administrateur gère les comptes, le personnel de l'établissement crée les dossiers et affecte le médecin référent. Le médecin consulte les dossiers, les mesures et les alertes pour assurer le suivi médical.",
   },
 ]
 
@@ -260,8 +271,7 @@ export function LandingPage() {
           <div className={`${container} relative py-12 lg:py-24`}>
             <div className="flex flex-col items-start gap-7 lg:max-w-2xl">
               <h1 className="font-display text-4xl leading-tight font-bold text-ink sm:text-6xl sm:leading-tight">
-                Suivez vos patients{' '}
-                <span className="text-primary">entre deux consultations</span>
+                Suivez vos patients <span className="text-primary">entre deux consultations</span>
               </h1>
               <p className="max-w-lg text-xl leading-relaxed text-muted">
                 eCare+ accompagne les équipes de santé dans le suivi des personnes vivant avec un
@@ -330,7 +340,8 @@ export function LandingPage() {
           <div className={`${container} grid items-center gap-10 lg:grid-cols-2 lg:gap-20`}>
             <div>
               <h2 className={sectionTitle}>
-                Les mesures qui comptent, <span className="text-primary">suivies dans le temps</span>
+                Les mesures qui comptent,{' '}
+                <span className="text-primary">suivies dans le temps</span>
               </h2>
               <p className={sectionIntro}>
                 Chaque relevé est daté et rattaché au dossier du patient. Le médecin voit la
@@ -425,7 +436,7 @@ export function LandingPage() {
                 Chaque professionnel accède uniquement aux écrans utiles à sa mission.
               </p>
             </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-2">
+            <div className="mt-12 grid gap-6 lg:grid-cols-3">
               {roles.map((role) => (
                 <article
                   key={role.name}
@@ -514,8 +525,7 @@ export function LandingPage() {
                     Votre structure utilise eCare+ ?
                   </h2>
                   <p className="mt-4 text-lg leading-relaxed text-white">
-                    Connectez-vous avec vos identifiants professionnels pour retrouver vos
-                    patients.
+                    Connectez-vous avec vos identifiants professionnels pour retrouver vos patients.
                   </p>
                 </div>
                 <Link
