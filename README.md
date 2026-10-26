@@ -1,5 +1,7 @@
 # eCare+ — Frontend Web
 
+Messages vocaux privés disponibles : enregistrement, brouillon, envoi explicite et lecture avec progression, via le backend commun. Voir [les ajouts récents](AJOUTS_RECENTS.md) et [la validation du 26 octobre 2026](docs/VALIDATION.md).
+
 ## Livraison indépendante du 25 octobre 2026
 
 Branche `ecare_frontend_stable`, reliée uniquement à son dépôt GitHub. Les [ajouts détaillés](AJOUTS_RECENTS.md), [contrats API](docs/backend/API.md) et [validation / limites](docs/VALIDATION.md) sont disponibles dans ce dépôt.

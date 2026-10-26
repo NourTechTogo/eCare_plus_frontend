@@ -118,3 +118,14 @@ Toutes les routes sont authentifiées et limitées au propriétaire de la notifi
 Les mutations réussies retournent 204 et sont idempotentes. Une notification supprimée disparaît des listes courante et archivée ; sa restauration retrouve son état d'archivage précédent. La suppression est logique et ne supprime ni message, ni appel, ni alerte clinique liée. `dateArchivage` est ajouté à la réponse. Le statut de lecture reste indépendant de l'archivage. Les mutations d'une autre personne sont refusées ; les lignes sont verrouillées pendant la mutation.
 
 La migration Flyway V30 ajoute `date_archivage`, `date_suppression` et un index de boîte, sans effacer les notifications existantes. L'ancienne liste mobile masque également archives et suppressions ; le portail web conserve sa requête courante et bénéficie du même filtrage.
+
+## Messages vocaux privés (26 octobre 2026, V31)
+
+Les vocaux utilisent les pièces jointes de conversation existantes, avec les mêmes droits de participation et d'affectation. Aucun stockage public ni fournisseur audio supplémentaire.
+
+1. `POST /api/v1/mobile/conversations/{id}/pieces-jointes` : multipart `fichier` et `sourceRef` stable ; fichier `audio/wav`, PCM signé 16 bits, 1 ou 2 canaux, fréquence de 8 à 48 kHz, durée de 250 ms à 120 s, taille maximale 5 Mio. Les clients enregistrent en mono 16 kHz. Le serveur contrôle les octets RIFF/WAVE, les blocs et la cohérence du débit ; les fichiers tronqués ou dont le type déclaré contredit le contenu sont refusés.
+2. La réponse de pièce jointe, puis `piecesJointes` du message, exposent `dureeMs`, calculée sur les données PCM par le serveur. Cette valeur est nulle pour les pièces non audio ; une durée fournie par le client n'est pas utilisée.
+3. `POST /api/v1/mobile/conversations/{id}/messages` : envoyer les identifiants des `piecesJointes` avec le `sourceRef` UUID stable du message. Conserver les deux références lors d'un réessai afin d'éviter les doublons. L'enregistrement ne déclenche jamais un envoi automatique ; l'utilisateur arrête, écoute son brouillon puis choisit Envoyer ou Annuler.
+4. `GET /api/v1/mobile/conversations/{id}/pieces-jointes/{pieceId}/contenu` : téléchargement authentifié privé avec `Cache-Control: no-store`. Avant l'envoi du message, le brouillon reste réservé à son auteur. Après envoi, les participants autorisés peuvent le lire.
+
+La migration V31 ajoute `duree_ms` nullable et sa contrainte de durée/type. Les documents médicaux restent limités aux PDF/JPEG/PNG : l'autorisation WAV concerne uniquement la messagerie. Les lecteurs mobile et web prennent en charge lecture, pause, progression et déplacement ; un seul vocal joue à la fois. Les changements de session et la navigation annulent les opérations audio obsolètes. L'enregistrement vocal est désactivé pendant un appel actif pour libérer son microphone.

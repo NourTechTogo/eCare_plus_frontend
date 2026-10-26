@@ -1,5 +1,13 @@
 # Ajouts et corrections récents — Frontend web eCare+
 
+## Livraison du 26 octobre 2026 : messages vocaux du portail
+
+- Enregistrement microphone WAV mono 16 kHz dans une conversation, minuterie, arrêt vers un brouillon, aperçu, annulation et envoi explicite. Limite 120 secondes sans envoi automatique.
+- Lecture privée à la demande, lecture/pause, durée et déplacement. Bulles compactes cohérentes avec la messagerie eCare+ et compatibles avec les vocaux Flutter.
+- Réessais sans doublon et protection lors d'un changement de session ; libération du microphone et des URL temporaires. Un appel actif réserve le microphone.
+- Lecture compatible React StrictMode ; un téléchargement retardé ne peut plus interrompre le vocal sélectionné ensuite.
+- 41 tests réussis, 1 test réseau optionnel ignoré ; lint et compilation réussis. Recette croisée Flutter/React et affichage à 390/1280 px vérifiés. [Validation et limites](docs/VALIDATION.md).
+
 ## Revue complète du dossier patient — 25 octobre 2026
 
 - En-tête adaptatif : le titre du dossier garde une ligne dédiée sur téléphone et petite tablette ; notifications et compte restent accessibles.

@@ -21,7 +21,7 @@ export interface MessageAttachment {
 }
 
 export interface Message {
-  pieces?: {id:string;nomOriginal:string;typeMime:string;tailleOctets:number}[]
+  pieces?: {id:string;nomOriginal:string;typeMime:string;tailleOctets:number;dureeMs?:number}[]
   readAt?: string
   id: string
   conversationId: string

@@ -5,8 +5,11 @@ import {TargetNotes} from '@/features/targeted-notes/components/TargetNotes'
 import {useAsyncData} from '@/hooks/useAsyncData'
 import {attachmentError,kindOf} from '../attachments'
 import {audioCallIconPath,videoCallIconPath,documentIconPath,micIconPath} from '../callIcons'
-import {dayKey,formatDay,formatTime,formatCallDuration} from '../format'
-import {listMessages,markConversationRead,sendMessage,uploadPiece,downloadPiece,MESSAGE_MAX_LENGTH} from '../services/messagingService'
+import {dayKey,formatDay,formatTime,formatCallDuration,formatTimer} from '../format'
+import {listMessages,markConversationRead,sendMessage,uploadPiece,uploadVoicePiece,downloadPiece,MESSAGE_MAX_LENGTH} from '../services/messagingService'
+import {useVoiceRecorder} from '../hooks/useVoiceRecorder'
+import {VoiceNotePlayer} from './VoiceNotePlayer'
+import {PrivateVoiceNote} from './PrivateVoiceNote'
 import type {Conversation} from '../types/message'
 import type {ServerCall} from '../services/callApi'
 import {InitialsTile} from './InitialsTile'
@@ -60,6 +63,12 @@ function ComposerButton({
 export function ConversationThread({conversation}:{conversation:Conversation}){
  const [version,setVersion]=useState(0),[text,setText]=useState(''),[sending,setSending]=useState(false),[error,setError]=useState('')
  const [attachments,setAttachments]=useState<DraftAttachment[]>([]),[calls,setCalls]=useState<ServerCall[]>([])
+ const voice=useVoiceRecorder(),[callBusy,setCallBusy]=useState(false)
+ const resetVoice=voice.reset
+ const voiceBusy=voice.state.status==='starting'||voice.state.status==='recording'
+ const voiceDraft=voice.state.status==='recorded'?voice.state:undefined
+ useEffect(()=>{if(callBusy){resetVoice();window.dispatchEvent(new Event('ecare:stop-voice'))}},[callBusy,resetVoice])
+ useEffect(()=>{window.addEventListener('ecare:stop-voice',resetVoice);return()=>window.removeEventListener('ecare:stop-voice',resetVoice)},[resetVoice])
  const submission=useRef<{fingerprint:string;key:string}|undefined>(undefined)
  const uploaded=useRef(new Map<string,string>()),mounted=useRef(true),pending=useRef(attachments),end=useRef<HTMLLIElement>(null)
  useEffect(()=>{pending.current=attachments},[attachments])
@@ -71,6 +80,7 @@ export function ConversationThread({conversation}:{conversation:Conversation}){
   ...calls.map(call=>({kind:'call' as const,id:call.id,at:call.dateCreation,call}))].sort((a,b)=>a.at.localeCompare(b.at))
  useEffect(()=>{end.current?.scrollIntoView({block:'nearest'})},[items.length])
  function pickFile(file:File){
+  if(sending||voiceBusy||voiceDraft)return
   const extension=file.name.split('.').at(-1)?.toLowerCase()
   const inferred=extension==='pdf'?'application/pdf':extension==='png'?'image/png':['jpg','jpeg'].includes(extension??'')?'image/jpeg':undefined
   const normalized=!file.type&&inferred?new File([file],file.name,{type:inferred,lastModified:file.lastModified}):file
@@ -81,16 +91,19 @@ export function ConversationThread({conversation}:{conversation:Conversation}){
  }
  function remove(source:string){setAttachments(previous=>previous.filter(a=>{if(a.source!==source)return true;URL.revokeObjectURL(a.previewUrl);return false}))}
  async function submit(event:FormEvent){
-  event.preventDefault();if((!text.trim()&&!attachments.length)||sending)return
+  event.preventDefault();if((!text.trim()&&!attachments.length&&!voiceDraft)||sending||voiceBusy)return
   setSending(true);setError('')
   try{
    const ids:string[]=[]
-   for(const attachment of attachments){let id=uploaded.current.get(attachment.source);if(!id){id=(await uploadPiece(conversation.id,attachment.file,attachment.source)).id;uploaded.current.set(attachment.source,id)}ids.push(id)}
+   for(const attachment of attachments){if(!mounted.current)return;let id=uploaded.current.get(attachment.source);if(!id){id=(await uploadPiece(conversation.id,attachment.file,attachment.source)).id;uploaded.current.set(attachment.source,id)}ids.push(id)}
+   if(!mounted.current)return
+   if(voiceDraft){let id=uploaded.current.get(voiceDraft.source);if(!id){id=(await uploadVoicePiece(conversation.id,new File([voiceDraft.recording],'message-vocal.wav',{type:'audio/wav'}),voiceDraft.source)).id;uploaded.current.set(voiceDraft.source,id)}ids.push(id)}
+   if(!mounted.current)return
    const fingerprint=JSON.stringify([text.trim(),ids])
    if(submission.current?.fingerprint!==fingerprint)submission.current={fingerprint,key:crypto.randomUUID()}
    await sendMessage(conversation.id,text.trim(),ids,submission.current.key)
    submission.current=undefined
-   if(mounted.current){attachments.forEach(a=>URL.revokeObjectURL(a.previewUrl));setText('');setAttachments([]);uploaded.current.clear();setVersion(value=>value+1)}
+   if(mounted.current){voice.reset();attachments.forEach(a=>URL.revokeObjectURL(a.previewUrl));setText('');setAttachments([]);uploaded.current.clear();setVersion(value=>value+1)}
   }catch(problem){if(mounted.current)setError(problem instanceof Error?problem.message:'Envoi impossible. Votre brouillon est conservé.')}
   finally{if(mounted.current)setSending(false)}
  }
@@ -99,7 +112,7 @@ export function ConversationThread({conversation}:{conversation:Conversation}){
   <header className="flex items-center gap-3 border-b border-line px-4 py-4 sm:px-6">
    <span className="lg:hidden"><IconLink to="/messagerie" label="Retour aux conversations" iconPath={backIconPath}/></span>
    <InitialsTile name={conversation.patientName}/><div className="min-w-0 flex-1"><h2 className="truncate font-display font-bold">{conversation.patientName}</h2><p className="text-xs text-muted">Dossier n° {conversation.patientFileNumber}</p></div>
-   <ServerCallPanel conversation={conversation.id} name={conversation.patientName} onHistoryLoaded={setCalls}/>
+   <ServerCallPanel conversation={conversation.id} name={conversation.patientName} onHistoryLoaded={setCalls} onBeforeCall={voice.reset} onMediaBusyChange={setCallBusy}/>
    <IconLink to={`/patients/${conversation.patientId}`} label="Consulter le dossier" iconPath={recordIconPath}/>
   </header>
   <p role="note" className="border-b border-line bg-page px-4 py-2 text-xs text-muted">Ce canal ne remplace pas les urgences. En cas d’urgence, contactez les services d’urgence.</p>
@@ -115,8 +128,8 @@ export function ConversationThread({conversation}:{conversation:Conversation}){
      </li>:<li ref={index===items.length-1?end:undefined} className={`flex max-w-[80%] flex-col gap-1 ${item.message.author==='professionnel'?'items-end self-end':'items-start self-start'}`}>
       <span className="sr-only">{item.message.author==='professionnel'?'Vous':conversation.patientName}</span>
       <div className={`rounded-3xl px-5 py-3 text-sm whitespace-pre-line shadow-sm ${item.message.author==='professionnel'?'bg-primary-strong text-white':'bg-surface text-ink'}`}>
-       {item.message.text&&<p>{item.message.text}</p>}
-       {item.message.pieces?.map(piece=><button key={piece.id} type="button" className="mt-2 flex max-w-full items-center gap-2 rounded-2xl bg-black/5 p-3 text-left text-sm" onClick={()=>void downloadPiece(conversation.id,piece).catch(problem=>setError(problem.message))}>
+       {item.message.text&&!(item.message.text==='Pièce jointe'&&item.message.pieces?.length&&item.message.pieces.every(piece=>piece.typeMime==='audio/wav'))&&<p>{item.message.text}</p>}
+       {item.message.pieces?.map(piece=>piece.typeMime==='audio/wav'?<PrivateVoiceNote key={piece.id} conversation={conversation.id} piece={piece} onPrimary={item.message.author==='professionnel'}/>:<button key={piece.id} type="button" className="mt-2 flex max-w-full items-center gap-2 rounded-2xl bg-black/5 p-3 text-left text-sm" onClick={()=>void downloadPiece(conversation.id,piece).catch(problem=>setError(problem.message))}>
         <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={documentIconPath}/></svg><span className="min-w-0 break-words">{piece.nomOriginal}</span><span className="sr-only">Télécharger</span></button>)}
       </div><p className="px-2 text-xs text-muted">{formatTime(item.at)}{item.message.author==='professionnel'?(item.message.readAt?' · Lu':' · Envoyé'):''}</p><TargetNotes type="MESSAGE" id={item.id}/>
      </li>}
@@ -124,14 +137,23 @@ export function ConversationThread({conversation}:{conversation:Conversation}){
   </div>
   <form onSubmit={event=>void submit(event)} className="flex flex-col gap-3 border-t border-line bg-surface p-4">
    {error&&<p role="alert" className="text-sm text-danger">{error}</p>}
+   {callBusy&&<p role="note" className="text-xs text-muted">Le microphone est réservé à l’appel. L’enregistrement vocal sera disponible après l’appel.</p>}
+   {voice.state.status==='error'&&<p role="alert" className="text-sm text-danger">{voice.state.reason==='denied'?'Accès au microphone refusé. Autorisez le microphone dans votre navigateur.':voice.state.reason==='short'?'Message trop court. Enregistrez au moins une seconde.':'Microphone indisponible. Vérifiez votre navigateur et votre microphone.'}</p>}
+   {(voiceBusy||voiceDraft)&&<div className="flex flex-wrap items-center gap-3 rounded-2xl bg-page p-3 text-sm">
+    {voice.state.status==='starting'&&<span role="status">Autorisez le microphone…</span>}
+    {voice.state.status==='recording'&&<><span role="status" className="tabular-nums text-danger">Enregistrement {formatTimer(voice.state.elapsed)} / 2:00</span><button type="button" onClick={voice.stop} className="rounded-full bg-primary px-4 py-2 text-white">Arrêter</button></>}
+    {voiceDraft&&<VoiceNotePlayer url={voiceDraft.url} durationSeconds={voiceDraft.durationSeconds}/>}
+    <button type="button" disabled={sending} onClick={voice.reset} className="rounded-full px-3 py-2 text-danger disabled:opacity-50">Annuler le message vocal</button>
+    {voiceDraft&&<ComposerButton type="submit" label="Envoyer le message vocal" iconPath={sendIconPath} primary busy={sending}/>}
+   </div>}
    {!!attachments.length&&<div className="max-h-40 space-y-2 overflow-y-auto">{attachments.map(attachment=><AttachmentPreview key={attachment.source} attachment={attachment} disabled={sending} onRemove={()=>remove(attachment.source)}/>)}</div>}
    <div className="flex items-end gap-1 rounded-4xl border border-control bg-surface py-2 pr-2 pl-2 focus-within:outline-2 focus-within:outline-primary">
-    <AttachmentMenu disabled={sending||attachments.length>=5} onPick={pickFile}/>
-    <label htmlFor="message-text" className="sr-only">Votre message</label><textarea id="message-text" rows={1} maxLength={MESSAGE_MAX_LENGTH} value={text} disabled={sending}
+    <AttachmentMenu disabled={sending||voiceBusy||!!voiceDraft||attachments.length>=5} onPick={pickFile}/>
+    <label htmlFor="message-text" className="sr-only">Votre message</label><textarea id="message-text" rows={1} maxLength={MESSAGE_MAX_LENGTH} value={text} disabled={sending||voiceBusy}
       onChange={event=>setText(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();event.currentTarget.form?.requestSubmit()}}}
       onPaste={event=>{const file=event.clipboardData.files[0];if(file){event.preventDefault();pickFile(file)}}}
       placeholder="Écrivez votre message…" className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm text-ink field-sizing-content placeholder:text-muted focus:outline-none disabled:text-muted"/>
-    {text.trim()||attachments.length?<ComposerButton type="submit" label="Envoyer le message" iconPath={sendIconPath} primary busy={sending}/>:<ComposerButton label="Messages vocaux non connectés" iconPath={micIconPath} primary disabled/>}
+    {text.trim()||attachments.length?<ComposerButton type="submit" label="Envoyer le message" iconPath={sendIconPath} primary busy={sending} disabled={voiceBusy}/>:!voiceBusy&&!voiceDraft&&<ComposerButton label="Enregistrer un message vocal" iconPath={micIconPath} primary disabled={sending||callBusy} onClick={()=>{window.dispatchEvent(new Event('ecare:stop-voice'));void voice.start()}}/>}
    </div>
   </form>
  </section>

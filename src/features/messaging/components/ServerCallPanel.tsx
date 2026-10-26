@@ -8,7 +8,7 @@ import type {LiveCallControls} from './LiveCallRoom'
 import {TargetNotes} from '@/features/targeted-notes/components/TargetNotes'
 const LiveCallRoom=lazy(()=>import('./LiveCallRoom').then(module=>({default:module.LiveCallRoom})))
 
-export function ServerCallPanel({conversation,name,onHistoryLoaded}:{conversation:string;name:string;onHistoryLoaded?:(rows:ServerCall[])=>void}){
+export function ServerCallPanel({conversation,name,onHistoryLoaded,onBeforeCall,onMediaBusyChange}:{conversation:string;name:string;onHistoryLoaded?:(rows:ServerCall[])=>void;onBeforeCall?:()=>void;onMediaBusyChange?:(busy:boolean)=>void}){
  const {user}=useAuth()
  const [revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState('')
  const [opened,setOpened]=useState(false),[selectedType,setSelectedType]=useState<'AUDIO'|'VIDEO'>('AUDIO')
@@ -17,9 +17,12 @@ export function ServerCallPanel({conversation,name,onHistoryLoaded}:{conversatio
  const state=useAsyncData(`calls:${conversation}:${revision}`,()=>callHistory(conversation),2000)
  const history=state.status==='success'?state.data.content:undefined
  const active=history?.find(activeCall)
+ const hasActive=!!active
+ useEffect(()=>{onMediaBusyChange?.(hasActive||busy)},[hasActive,busy,onMediaBusyChange])
  useEffect(()=>{if(history)onHistoryLoaded?.(history)},[history,onHistoryLoaded])
  async function start(type:'AUDIO'|'VIDEO'){
   if(busy||active)return
+  onBeforeCall?.();window.dispatchEvent(new Event('ecare:stop-voice'))
   setBusy(true);setError('');setSelectedType(type);setOpened(true)
   if(source.current?.type!==type)source.current={type,key:crypto.randomUUID()}
   try{await createCall(conversation,type,source.current.key);source.current=undefined;setRevision(value=>value+1)}
@@ -28,6 +31,7 @@ export function ServerCallPanel({conversation,name,onHistoryLoaded}:{conversatio
  }
  async function action(call:ServerCall,command:'acceptation'|'refus'|'fin'){
   if(busy)return
+  if(command==='acceptation'){onBeforeCall?.();window.dispatchEvent(new Event('ecare:stop-voice'))}
   setBusy(true);setError('')
   if(command==='fin'){setOpened(true);setMediaStopped(call.id)}
   try{await callAction(call.id,command);setRevision(value=>value+1);if(command!=='acceptation')setOpened(false)}
