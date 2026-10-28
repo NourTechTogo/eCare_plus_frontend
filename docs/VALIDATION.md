@@ -1,5 +1,20 @@
 # Validation et limites de la livraison du 25 octobre 2026
 
+## Publication sur la nouvelle branche - 28 octobre 2026
+
+Contenu regroupé sur `ecare_frontend_autonomie_rapports`, sans fusion dans main. Vérification prépublication : 43 tests réussis, 1 optionnels ignorés ; aucun échec. Voir [le bilan de publication](PUBLICATION_2026-10-28.md). Les mentions « travail local / aucun push » des entrées antérieures décrivent leur état avant cette publication.
+
+## 28 octobre 2026 - rapports et comptes rendus transmis
+
+- Suite Node : **43 tests réussis, 1 test réseau optionnel ignoré**, aucun échec (44 au total). Deux tests nouveaux vérifient le filtrage sur plusieurs pages autorisées et le maintien de la pagination serveur en mode Tous.
+- Lint réussi (code 0), compilation TypeScript/Vite réussie. Composants et styles du portail réutilisés ; aucune dépendance ajoutée.
+- Recette API réelle mobile → copie documentaire → portail médecin : le compte rendu volontairement transmis apparaît dans le filtre dédié et le téléchargement est identique octet par octet au PDF du mobile. Le formulaire et le filtre Tous sont conservés. Les routes des rapports personnels ne sont jamais appelées par le portail professionnel.
+- Captures relues à 320/768/1280 px, absence de débordement horizontal vérifiée. Écran non vide, sans surcouche d'erreur du framework ; aucune erreur de page/console ni requête échouée sur le parcours final. Browser plugin absent : Playwright/Edge local existant utilisé.
+- Serveur Vite local 5183 relancé avec VITE_API_URL=/api/v1 et VITE_DEV_PROXY_TARGET=http://127.0.0.1:8081 pour rejoindre l'API locale commune. Cette configuration de processus ne modifie pas les fichiers d'environnement du projet.
+- Backend et autorisations inchangés ; aucun commit/push. Téléchargement réservé aux documents déjà accessibles au professionnel, sans partage implicite de la synthèse personnelle. Les très gros volumes de métadonnées et les autres navigateurs/appareils ne sont pas validés dans ce lot.
+
+[Parcours et limites](RAPPORTS_TRANSMIS.md).
+
 ## Validation des messages vocaux — 26 octobre 2026
 
 - Backend : 171 tests réussis, 0 échec et 0 ignoré, avec PostgreSQL 18.6 dédié et migrations V1 à V31.

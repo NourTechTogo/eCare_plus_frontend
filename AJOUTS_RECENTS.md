@@ -1,5 +1,17 @@
 # Ajouts et corrections récents — Frontend web eCare+
 
+## Publication sur la nouvelle branche - 28 octobre 2026
+
+Contenu regroupé sur `ecare_frontend_autonomie_rapports`, sans fusion dans main. Vérification prépublication : 43 tests réussis, 1 optionnels ignorés ; aucun échec. Voir [le bilan de publication](docs/PUBLICATION_2026-10-28.md). Les mentions « travail local / aucun push » des entrées antérieures décrivent leur état avant cette publication.
+
+## 28 octobre 2026 - rapports et comptes rendus transmis
+
+- Filtre dédié dans les Documents du dossier patient, actualisation et téléchargement privé des copies PDF transmises volontairement depuis le mobile.
+- Filtrage sur toutes les pages de métadonnées autorisées avant pagination ; le mode Tous et le formulaire existant sont conservés.
+- Type documentaire affiché ; état réinitialisé quand le patient change. Aucun accès implicite aux synthèses personnelles.
+- Styles eCare+ conservés, sans dépendance, route backend ou permission supplémentaire. Aucun commit/push.
+- [Parcours et limites](docs/RAPPORTS_TRANSMIS.md). Résultats dans docs/VALIDATION.md.
+
 ## Livraison du 26 octobre 2026 : messages vocaux du portail
 
 - Enregistrement microphone WAV mono 16 kHz dans une conversation, minuterie, arrêt vers un brouillon, aperçu, annulation et envoi explicite. Limite 120 secondes sans envoi automatique.

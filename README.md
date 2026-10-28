@@ -1,5 +1,7 @@
 # eCare+ — Frontend Web
 
+Rapports de consultation intégrés en local le 28 octobre 2026 : [parcours et limites](docs/RAPPORTS_TRANSMIS.md), [validation](docs/VALIDATION.md). Branche de publication : `ecare_frontend_autonomie_rapports`, sans fusion dans main.
+
 Messages vocaux privés disponibles : enregistrement, brouillon, envoi explicite et lecture avec progression, via le backend commun. Voir [les ajouts récents](AJOUTS_RECENTS.md) et [la validation du 26 octobre 2026](docs/VALIDATION.md).
 
 ## Livraison indépendante du 25 octobre 2026
